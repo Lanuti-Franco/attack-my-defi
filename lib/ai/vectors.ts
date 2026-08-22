@@ -50,6 +50,13 @@ export interface AttackVector {
    * Corre contra un snapshot propio, así no contamina a los demás vectores.
    */
   prepare?: () => Promise<void>
+  /**
+   * Qué significa que este vector no haya podido liquidar la posición.
+   *
+   * "No encontré ningún escenario" desperdicia el resultado: que un ataque no
+   * llegue a matarte es información, y a veces la más valiosa del informe.
+   */
+  survivedMessage: string
 }
 
 export type VectorId =
@@ -86,6 +93,8 @@ function priceCrash(strategy: Strategy): AttackVector {
         'You are looking for the smallest ETH price drop that makes the position liquidatable.',
       paramName: 'drop_pct',
       paramDescription: 'ETH price change in percent. Negative: -25 means ETH drops 25%.',
+    survivedMessage:
+      'Ni una caída del 80% la liquida. Tu colateral cubre la deuda con muchísimo margen.',
       targetAsset: 'WETH',
     }
   }
@@ -102,6 +111,7 @@ function priceCrash(strategy: Strategy): AttackVector {
     briefing: `You are looking for the smallest ${debtAsset} price increase that makes the position liquidatable. The debt is denominated in ${debtAsset}, so a more expensive ${debtAsset} means a larger debt.`,
     paramName: 'rise_pct',
     paramDescription: `${debtAsset} price change in percent. Positive: 25 means it rises 25%.`,
+    survivedMessage: `Ni triplicando el precio de ${debtAsset} te liquidan.`,
     targetAsset: debtAsset,
   }
 }
@@ -134,6 +144,8 @@ function stablecoinDepeg(strategy: Strategy): AttackVector | null {
       'liquidatable. The collateral is USDC, so a cheaper USDC means less collateral value.',
     paramName: 'usdc_price',
     paramDescription: 'USDC price in USD. 1.0 is the peg. 0.9 means USDC trades 10% below peg.',
+    survivedMessage:
+      'Aguantás un USDC a 50 centavos, mucho peor que el mínimo histórico de $0,87 en marzo de 2023.',
     targetAsset: 'USDC',
   }
 }
@@ -161,6 +173,8 @@ function oracleManipulation(strategy: Strategy): AttackVector {
       'the position liquidatable. The market price has not moved: only the oracle reports a lower value.',
     paramName: 'deviation_pct',
     paramDescription: `Downward deviation of the reported ${asset} price, in percent. Negative: -25 means the feed reports 25% below market.`,
+    survivedMessage:
+      'Ni un feed reportando un 80% de menos te liquida: estás fuera del alcance de un fallo de oráculo.',
     targetAsset: asset,
     isOracleManipulation: true,
   }
@@ -198,6 +212,8 @@ function timeDecay(): AttackVector {
     formatForModel: (days) => `${Math.round(days)} days`,
     paramName: 'days',
     paramDescription: 'How many days to let pass. 365 means one year.',
+    survivedMessage:
+      'Ni en diez años el interés te alcanza. Tu deuda crece más lento de lo que tu colchón aguanta.',
   }
 }
 
@@ -227,6 +243,8 @@ function governanceRiskChange(strategy: Strategy): AttackVector {
     paramName: 'threshold_drop_points',
     paramDescription:
       'How many percentage points to lower the liquidation threshold by. 5 means it goes from 83% to 78%.',
+    survivedMessage:
+      'Aguantás que Aave te recorte 40 puntos el umbral, un ajuste mucho mayor que cualquiera que haya hecho.',
     targetAsset: asset,
   }
 }
@@ -271,6 +289,8 @@ function liquidityCrisis(strategy: Strategy): AttackVector {
     paramName: 'liquidity_drained_pct',
     paramDescription:
       'What percentage of the available pool liquidity gets borrowed away. 90 means 90% of it.',
+    survivedMessage:
+      'Aunque se lleven casi toda la liquidez del pool, el interés no te alcanza dentro del año.',
     targetAsset: asset,
   }
 }
@@ -309,6 +329,8 @@ function liquidationCascade(strategy: Strategy): AttackVector | null {
       'against real Uniswap V3 pools.',
     paramName: 'weth_liquidated',
     paramDescription: 'How much WETH gets liquidated and sold into the market, in whole WETH.',
+    survivedMessage:
+      'El mercado no tiene profundidad para arrastrarte: ni vendiendo 5.000 WETH de golpe el precio se mueve lo suficiente.',
     targetAsset: 'WETH',
   }
 }

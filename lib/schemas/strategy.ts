@@ -82,6 +82,8 @@ export type AuditEvent =
       thresholdLabel: string | null
       attackerProfitUsd?: number
       steps: number
+      /** Qué significa que este vector no haya llegado a liquidar la posición. */
+      survivedMessage: string
     }
   | { type: 'recommendations'; recommendations: RecommendationView[] }
 

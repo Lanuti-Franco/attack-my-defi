@@ -12,6 +12,7 @@ interface VectorRun {
   attempts: Extract<AuditEvent, { type: 'attempt' }>[]
   thresholdLabel: string | null
   attackerProfitUsd?: number
+  survivedMessage: string
   done: boolean
 }
 
@@ -34,6 +35,7 @@ function build(events: AuditEvent[]) {
           premise: ev.premise,
           attempts: [],
           thresholdLabel: null,
+          survivedMessage: '',
           done: false,
         })
         break
@@ -45,6 +47,7 @@ function build(events: AuditEvent[]) {
         if (v) {
           v.thresholdLabel = ev.thresholdLabel
           v.attackerProfitUsd = ev.attackerProfitUsd
+          v.survivedMessage = ev.survivedMessage
           v.done = true
         }
         break
@@ -91,8 +94,12 @@ export function AuditReport({ events }: { events: AuditEvent[] }) {
               <p className="mt-0.5 text-xs text-neutral-500">{v.premise}</p>
             </div>
             {v.done && (
-              <span className="font-mono text-lg tabular-nums text-red-400">
-                {v.thresholdLabel ?? 'no la liquida'}
+              <span
+                className={`font-mono text-lg tabular-nums ${
+                  v.thresholdLabel ? 'text-red-400' : 'text-emerald-400'
+                }`}
+              >
+                {v.thresholdLabel ?? 'sobrevive'}
               </span>
             )}
           </div>
@@ -120,6 +127,12 @@ export function AuditReport({ events }: { events: AuditEvent[] }) {
                 </div>
               ))}
             </div>
+          )}
+
+          {v.done && !v.thresholdLabel && v.survivedMessage && (
+            <p className="mt-3 border-t border-neutral-800 pt-3 text-sm leading-relaxed text-emerald-300/80">
+              {v.survivedMessage}
+            </p>
           )}
 
           {v.attackerProfitUsd !== undefined && (

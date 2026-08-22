@@ -71,6 +71,7 @@ export async function* runAudit(opts: {
       thresholdLabel: outcome.thresholdLabel,
       attackerProfitUsd: outcome.attackerProfitUsd,
       steps: outcome.probes.length,
+      survivedMessage: vector.survivedMessage,
     }
   }
 

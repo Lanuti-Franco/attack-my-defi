@@ -282,7 +282,7 @@ export async function* searchThreshold(opts: {
       probes,
       threshold: null,
       thresholdLabel: null,
-      summary: `Tras ${probes.length} simulaciones no encontré ningún escenario que la liquide.`,
+      summary: vector.survivedMessage,
     };
   }
 
