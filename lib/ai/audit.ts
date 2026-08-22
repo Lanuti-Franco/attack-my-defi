@@ -1,0 +1,141 @@
+import { ScenarioEngine } from '../simulation/scenarioEngine'
+import { vectorsFor, type AttackVector } from './vectors'
+import { ensureModel } from './localModel'
+import { searchThreshold } from './liquidator'
+import { RISK_PROFILES, recommendFor, type Recommendation } from '../simulation/riskProfiles'
+import type { Strategy, AuditEvent, RecommendationView } from '../schemas/strategy'
+
+/**
+ * Corre todos los vectores contra la misma posición y cierra con qué hacer.
+ *
+ * Un ataque suelto responde "¿esto me puede pasar?". La auditoría completa
+ * responde la pregunta que de verdad importa: de todo lo que puede matarte,
+ * qué es lo más cercano, y cuánta deuda tenés que sacarte de encima para dormir
+ * tranquilo.
+ */
+export async function* runAudit(opts: {
+  strategy: Strategy
+  modelId?: string
+}): AsyncGenerator<AuditEvent> {
+  const engine = new ScenarioEngine()
+  const base = await engine.setup(opts.strategy)
+
+  yield {
+    type: 'position',
+    collateralUsd: base.collateralUsd,
+    debtUsd: base.debtUsd,
+    healthFactor: base.healthFactor,
+    liquidationThreshold: base.liquidationThreshold,
+  }
+
+  if (base.debtUsd < 1) {
+    yield {
+      type: 'error',
+      message: 'La posición no tiene deuda, así que no puede liquidarse. Pedí prestado algo.',
+    }
+    return
+  }
+
+  const modelId = opts.modelId ?? (await ensureModel())
+  const vectors = vectorsFor(opts.strategy)
+
+  yield { type: 'auditStart', vectorCount: vectors.length }
+
+  for (const vector of vectors) {
+    yield { type: 'vectorStart', vectorId: vector.id, label: vector.label, premise: vector.premise }
+
+    // Se consume el generador paso a paso para que cada simulación llegue al
+    // feed apenas ocurre, en vez de aparecer todas juntas al terminar el vector.
+    const search = searchThreshold({ engine, vector, modelId, base, strategy: opts.strategy })
+    let step = await search.next()
+    while (!step.done) {
+      const probe = step.value
+      yield {
+        type: 'attempt',
+        vectorId: vector.id,
+        label: vector.format(probe.intensity),
+        intensity: probe.intensity,
+        healthFactor: probe.healthFactor,
+        verdict: probe.liquidated ? 'LIQUIDATABLE' : 'SURVIVED',
+        collateralUsd: probe.collateralUsd,
+      }
+      step = await search.next()
+    }
+    const outcome = step.value
+
+    yield {
+      type: 'vectorDone',
+      vectorId: vector.id,
+      label: vector.label,
+      threshold: outcome.threshold,
+      thresholdLabel: outcome.thresholdLabel,
+      attackerProfitUsd: outcome.attackerProfitUsd,
+      steps: outcome.probes.length,
+    }
+  }
+
+  // Las recomendaciones se despejan de la fórmula y después se verifican
+  // simulando la posición ajustada: el número que se muestra tiene que
+  // sobrevivir de verdad, no sólo en el papel.
+  const recommendations: RecommendationView[] = []
+  for (const profile of RISK_PROFILES) {
+    const rec = recommendFor({
+      profile,
+      collateralUsd: base.collateralUsd,
+      debtUsd: base.debtUsd,
+      liquidationThreshold: base.liquidationThreshold,
+    })
+
+    const verifiedHf = await verifyRecommendation(engine, opts.strategy, profile, rec)
+    recommendations.push({
+      profileId: profile.id,
+      profileLabel: profile.label,
+      benchmark: profile.benchmark,
+      maxDebtUsd: rec.maxDebtUsd,
+      repayUsd: rec.repayUsd,
+      alreadySafe: rec.alreadySafe,
+      resultingHealthFactor: verifiedHf ?? rec.resultingHealthFactor,
+    })
+  }
+
+  yield { type: 'recommendations', recommendations }
+}
+
+/**
+ * Rearma la posición con la deuda recomendada y le aplica el escenario del
+ * perfil, para confirmar que efectivamente sobrevive. Devuelve el health factor
+ * que reportó Aave, o null si no se pudo verificar.
+ */
+async function verifyRecommendation(
+  engine: ScenarioEngine,
+  strategy: Strategy,
+  profile: (typeof RISK_PROFILES)[number],
+  rec: Recommendation,
+): Promise<number | null> {
+  if (rec.alreadySafe) {
+    const result = await engine.run(profile.scenario(strategy))
+    return result.state.healthFactor
+  }
+
+  // La deuda recomendada está en USD; la posición se arma en unidades del
+  // activo, así que se convierte con el precio que ya conocemos de la posición.
+  const original = await engine.baseline()
+  const debtUnitPrice = original.debtUsd / strategy.debt.amount
+  const safeAmount = rec.maxDebtUsd / debtUnitPrice
+
+  try {
+    const adjusted: Strategy = {
+      collateral: strategy.collateral,
+      debt: { asset: strategy.debt.asset, amount: Number(safeAmount.toFixed(6)) },
+    }
+    await engine.setup(adjusted)
+    const result = await engine.run(profile.scenario(adjusted))
+    return result.state.healthFactor
+  } catch {
+    return null
+  } finally {
+    // Se deja el motor como estaba para que el resto del informe siga midiendo
+    // la posición que el usuario describió.
+    await engine.setup(strategy)
+  }
+}

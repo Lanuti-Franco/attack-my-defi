@@ -56,3 +56,42 @@ export type AttackEvent =
       text: string
     }
   | { type: 'error'; message: string }
+
+/**
+ * Eventos de la auditoría completa: todos los vectores contra la misma posición,
+ * cerrando con qué hacer al respecto.
+ */
+export type AuditEvent =
+  | Extract<AttackEvent, { type: 'position' } | { type: 'error' }>
+  | { type: 'auditStart'; vectorCount: number }
+  | { type: 'vectorStart'; vectorId: string; label: string; premise: string }
+  | {
+      type: 'attempt'
+      vectorId: string
+      label: string
+      intensity: number
+      healthFactor: number
+      verdict: 'SURVIVED' | 'LIQUIDATABLE'
+      collateralUsd: number
+    }
+  | {
+      type: 'vectorDone'
+      vectorId: string
+      label: string
+      threshold: number | null
+      thresholdLabel: string | null
+      attackerProfitUsd?: number
+      steps: number
+    }
+  | { type: 'recommendations'; recommendations: RecommendationView[] }
+
+/** Recomendación tal como viaja al navegador (sin funciones). */
+export interface RecommendationView {
+  profileId: string
+  profileLabel: string
+  benchmark: string
+  maxDebtUsd: number
+  repayUsd: number
+  alreadySafe: boolean
+  resultingHealthFactor: number
+}
