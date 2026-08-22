@@ -19,7 +19,7 @@ async function main() {
         )
         break
       case 'auditStart':
-        console.log(`corriendo ${ev.vectorCount} vectores...\n`)
+        console.log(`corriendo ${ev.vectors.length} vectores...\n`)
         break
       case 'vectorStart':
         console.log(`── ${ev.label}`)

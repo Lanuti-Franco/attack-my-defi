@@ -55,7 +55,10 @@ async function* audit(
   const modelId = opts.modelId ?? (await ensureModel())
   const vectors = vectorsFor(opts.strategy)
 
-  yield { type: 'auditStart', vectorCount: vectors.length }
+  yield {
+    type: 'auditStart',
+    vectors: vectors.map((v) => ({ id: v.id, label: v.label })),
+  }
 
   for (const vector of vectors) {
     yield { type: 'vectorStart', vectorId: vector.id, label: vector.label, premise: vector.premise }

@@ -34,7 +34,7 @@ export function Window({
 }) {
   return (
     <section
-      className={`raised p-1 ${opening ? 'window-open' : ''} ${shaking ? 'hit' : ''} ${className}`}
+      className={`raised flex flex-col p-1 ${opening ? 'window-open' : ''} ${shaking ? 'hit' : ''} ${className}`}
     >
       <header
         className="flex items-center gap-2 px-1 py-[3px]"
@@ -60,7 +60,7 @@ export function Window({
       </header>
 
       <div
-        className={tone === 'dead' ? 'bg-(--bsod) p-4' : 'p-3'}
+        className={tone === 'dead' ? 'flex-1 bg-(--bsod) p-4' : 'flex-1 p-3'}
         style={tone === 'dead' ? undefined : { background: 'var(--chrome)' }}
       >
         {children}

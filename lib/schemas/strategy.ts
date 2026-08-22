@@ -63,7 +63,18 @@ export type AttackEvent =
  */
 export type AuditEvent =
   | Extract<AttackEvent, { type: 'position' } | { type: 'error' }>
-  | { type: 'auditStart'; vectorCount: number }
+  | {
+      type: 'auditStart'
+      /**
+       * Qué ataques se van a correr, anunciados antes de empezar.
+       *
+       * Sin esto la interfaz sólo puede mostrar los que ya arrancaron, y la
+       * auditoría se lee como una lista que crece en vez de como una cola que
+       * se va despachando. Cuáles aplican depende de la posición, así que no se
+       * pueden dar por sabidos del lado del navegador.
+       */
+      vectors: { id: string; label: string }[]
+    }
   | { type: 'vectorStart'; vectorId: string; label: string; premise: string }
   | {
       type: 'attempt'
