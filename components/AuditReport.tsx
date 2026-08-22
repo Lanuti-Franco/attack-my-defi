@@ -3,6 +3,7 @@
 import type { AuditEvent, RecommendationView } from '@/lib/schemas/strategy'
 import { Window, ProgressBar } from '@/components/win95/Window'
 import { HealthBar } from '@/components/win95/HealthBar'
+import { Verdict, breachesFrom } from '@/components/Verdict'
 
 const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))
@@ -79,9 +80,19 @@ function build(events: AuditEvent[]) {
   return { position, vectors, recommendations, errors }
 }
 
-export function AuditReport({ events }: { events: AuditEvent[] }) {
+export function AuditReport({
+  events,
+  forkBlock,
+}: {
+  events: AuditEvent[]
+  forkBlock: string
+}) {
   const { position, vectors, recommendations, errors } = build(events)
   if (!position && !errors.length) return null
+
+  // Las recomendaciones son lo último que emite la auditoría: hasta que no
+  // llegan, todavía hay ataques corriendo y cualquier resumen sería parcial.
+  const finished = recommendations.length > 0
 
   return (
     <div className="flex flex-col gap-5">
@@ -98,6 +109,15 @@ export function AuditReport({ events }: { events: AuditEvent[] }) {
             />
           </dl>
         </Window>
+      )}
+
+      {finished && (
+        <Verdict
+          breaches={breachesFrom(events)}
+          vectorsRun={vectors.length}
+          recommendation={recommendations.find((r) => !r.alreadySafe) ?? recommendations[0] ?? null}
+          forkBlock={forkBlock}
+        />
       )}
 
       {vectors.map((v, i) => (

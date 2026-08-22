@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const assetSchema = z.enum(['WETH', 'USDC'])
+export const assetSchema = z.enum(['WETH', 'USDC', 'WBTC'])
 
 const legSchema = z.object({
   asset: assetSchema,
@@ -82,6 +82,12 @@ export type AuditEvent =
       thresholdLabel: string | null
       attackerProfitUsd?: number
       steps: number
+      /**
+       * Qué tan poco hace falta para romper la posición por acá: 0 es un mundo
+       * tranquilo y 1 el escenario más extremo que este vector contempla. Es lo
+       * que permite ordenar ataques que se miden en unidades distintas.
+       */
+      severity: number | null
       /** Qué significa que este vector no haya llegado a liquidar la posición. */
       survivedMessage: string
     }

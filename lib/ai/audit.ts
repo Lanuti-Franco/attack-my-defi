@@ -1,7 +1,7 @@
 import { ScenarioEngine } from '../simulation/scenarioEngine'
 import { vectorsFor, type AttackVector } from './vectors'
 import { ensureModel } from './localModel'
-import { searchThreshold } from './liquidator'
+import { severity, searchThreshold } from './liquidator'
 import { RISK_PROFILES, recommendFor, type Recommendation } from '../simulation/riskProfiles'
 import type { Strategy, AuditEvent, RecommendationView } from '../schemas/strategy'
 
@@ -71,6 +71,7 @@ export async function* runAudit(opts: {
       thresholdLabel: outcome.thresholdLabel,
       attackerProfitUsd: outcome.attackerProfitUsd,
       steps: outcome.probes.length,
+      severity: outcome.threshold === null ? null : severity(outcome.threshold, vector),
       survivedMessage: vector.survivedMessage,
     }
   }

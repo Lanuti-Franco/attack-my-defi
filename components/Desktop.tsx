@@ -121,7 +121,7 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
       </Window>
 
       <div className="mt-5">
-        <AuditReport events={events} />
+        <AuditReport events={events} forkBlock={forkBlock} />
       </div>
 
       {/* La ayuda se corre abajo apenas hay resultados: hasta entonces es lo

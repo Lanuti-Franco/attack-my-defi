@@ -15,6 +15,7 @@ export const ADDRESSES = {
   // Activos
   weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  wbtc: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
 
   /**
    * aToken de USDC. Guarda el USDC depositado en Aave (~180M), así que en el
@@ -22,6 +23,8 @@ export const ADDRESSES = {
    * frágil que calcular el slot de storage del balance de un proxy.
    */
   aUsdc: '0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c',
+  /** aToken de WBTC, con ~32.500 WBTC. Mismo truco que con USDC. */
+  aWbtc: '0x5Ee5bf7ae06D1Be5997A1A72006FE6C607eC6DE8',
 } as const satisfies Record<string, Address>
 
 /** Cuenta 0 de Anvil. Clave pública y determinística: sólo existe en el fork. */
@@ -43,12 +46,45 @@ export const DECIMALS = {
   bps: 4,
   weth: 18,
   usdc: 6,
+  wbtc: 8,
 } as const
 
-export type AssetSymbol = 'WETH' | 'USDC'
+export type AssetSymbol = 'WETH' | 'USDC' | 'WBTC'
 
-/** Metadatos por activo, para no repetir decimales ni direcciones. */
+/**
+ * Metadatos por activo, para no repetir decimales ni direcciones.
+ *
+ * `funder` es de dónde sale el activo dentro del fork. WETH se envuelve con el
+ * ETH que Anvil regala; los otros se le sacan a su propio aToken de Aave, que
+ * guarda de sobra y evita tener que calcular slots de storage de un proxy.
+ *
+ * `stable` decide qué ataque tiene sentido: a un colateral volátil se lo tumba
+ * haciéndolo caer, y a uno estable no —ahí el riesgo es que se despegue, que
+ * es otro vector—.
+ */
 export const ASSETS = {
-  WETH: { address: ADDRESSES.weth, decimals: DECIMALS.weth, label: 'WETH' },
-  USDC: { address: ADDRESSES.usdc, decimals: DECIMALS.usdc, label: 'USDC' },
-} as const satisfies Record<AssetSymbol, { address: Address; decimals: number; label: string }>
+  WETH: {
+    address: ADDRESSES.weth,
+    decimals: DECIMALS.weth,
+    label: 'ETH',
+    funder: null,
+    stable: false,
+  },
+  WBTC: {
+    address: ADDRESSES.wbtc,
+    decimals: DECIMALS.wbtc,
+    label: 'BTC',
+    funder: ADDRESSES.aWbtc,
+    stable: false,
+  },
+  USDC: {
+    address: ADDRESSES.usdc,
+    decimals: DECIMALS.usdc,
+    label: 'USDC',
+    funder: ADDRESSES.aUsdc,
+    stable: true,
+  },
+} as const satisfies Record<
+  AssetSymbol,
+  { address: Address; decimals: number; label: string; funder: Address | null; stable: boolean }
+>

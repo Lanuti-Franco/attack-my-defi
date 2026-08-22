@@ -63,8 +63,14 @@ function clampToBounds(raw: number, vector: AttackVector): number | null {
   return Math.min(hi, Math.max(lo, oriented));
 }
 
-/** Qué tan lejos está una intensidad del mundo tranquilo. 0 = nada pasa, 1 = extremo. */
-function severity(intensity: number, vector: AttackVector): number {
+/**
+ * Qué tan lejos está una intensidad del mundo tranquilo. 0 = nada pasa, 1 = extremo.
+ *
+ * Es lo único que deja comparar vectores entre sí: -27% de ETH y una venta de
+ * 5.000 WETH no se pueden poner en la misma escala, pero "a mitad de camino
+ * del peor escenario" y "casi en el extremo" sí.
+ */
+export function severity(intensity: number, vector: AttackVector): number {
   const { safe, extreme } = vector.bounds;
   return Math.abs(intensity - safe) / Math.abs(extreme - safe);
 }

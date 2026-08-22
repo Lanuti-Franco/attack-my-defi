@@ -1,5 +1,5 @@
 import type { Address } from 'viem'
-import { ADDRESSES, type AssetSymbol } from '../chain/addresses'
+import { ASSETS, ADDRESSES, type AssetSymbol } from '../chain/addresses'
 import { readAssetPrice } from '../chain/aave'
 import { installMockFeed, setAssetPrice } from './oracle'
 import { testClient } from '../chain/client'
@@ -27,7 +27,7 @@ export type Mutation =
   | { type: 'marketSale'; asset: AssetSymbol; amount: number }
 
 export function assetAddress(asset: AssetSymbol): Address {
-  return asset === 'WETH' ? ADDRESSES.weth : ADDRESSES.usdc
+  return ASSETS[asset].address
 }
 
 /** Descripción legible, para el feed del ataque en la UI. */

@@ -2,6 +2,7 @@ import type { Mutation } from '../simulation/mutations'
 import type { Strategy } from '../schemas/strategy'
 import type { AssetSymbol } from '../chain/addresses'
 import { fundWhale } from '../simulation/liquidityDrain'
+import { ASSETS } from '@/lib/chain/addresses'
 
 /**
  * Un vector de ataque es una forma de romper la posición.
@@ -68,32 +69,33 @@ export type VectorId = 'price' | 'depeg' | 'time' | 'governance' | 'liquidity' |
 /**
  * Movimiento adverso del activo volátil.
  *
- * Cuál es el activo volátil depende de la posición: si el colateral es WETH, el
- * daño viene de que caiga. Si el colateral es una stablecoin, el colateral no se
- * mueve — el riesgo está en que se encarezca la deuda. Apuntar siempre al
- * colateral haría que este vector fuera idéntico al depeg cuando el colateral es
- * USDC, o sea el mismo ataque contado dos veces.
+ * Cuál es el activo volátil depende de la posición: si el colateral se mueve
+ * —ETH, BTC—, el daño viene de que caiga. Si el colateral es una stablecoin no
+ * se mueve, y el riesgo pasa a ser que se encarezca la deuda. Apuntar siempre
+ * al colateral haría que este vector fuera idéntico al depeg cuando el
+ * colateral es USDC, o sea el mismo ataque contado dos veces.
  */
 function priceCrash(strategy: Strategy): AttackVector {
-  const collateralIsVolatile = strategy.collateral.asset === 'WETH'
+  const collateral = strategy.collateral.asset
+  const { label, stable } = ASSETS[collateral]
 
-  if (collateralIsVolatile) {
+  if (!stable) {
     return {
       id: 'price',
-      label: 'Caída de ETH',
+      label: `Caída de ${label}`,
       premise:
         'El precio que Aave usa para tu colateral baja, sea porque el mercado cayó o porque el feed falló.',
-      mutate: (pct) => [{ type: 'priceShock', asset: 'WETH', pct }],
+      mutate: (pct) => [{ type: 'priceShock', asset: collateral, pct }],
       bounds: { safe: 0, extreme: -80 },
       scale: 'percent',
-      format: (pct) => `ETH ${pct.toFixed(1)}%`,
-      briefing:
-        'You are looking for the smallest ETH price drop that makes the position liquidatable.',
+      format: (pct) => `${label} ${pct.toFixed(1)}%`,
+      briefing: `You are looking for the smallest ${label} price drop that makes the position liquidatable.`,
       paramName: 'drop_pct',
-      paramDescription: 'ETH price change in percent. Negative: -25 means ETH drops 25%.',
-    survivedMessage:
-      'Ni una caída del 80% la liquida. Tu colateral cubre la deuda con muchísimo margen.',
-      targetAsset: 'WETH',
+      paramDescription: `${label} price change in percent. Negative: -25 means ${label} drops 25%.`,
+      survivedMessage:
+        'Ni una caída del 80% la liquida. Tu colateral cubre la deuda con muchísimo margen.',
+      targetAsset: collateral,
+      reportsOracleProfit: true,
     }
   }
 

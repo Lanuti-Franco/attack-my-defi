@@ -17,32 +17,30 @@ export interface StrategySpec {
 /**
  * Consigue el activo dentro del fork para poder depositarlo.
  *
- * WETH se envuelve con el ETH que Anvil le da a la cuenta. USDC no se puede
- * emitir, así que se toma prestado del aToken de Aave —que guarda ~180M— con
- * impersonación. Es más simple y menos frágil que calcular el slot de storage
- * del balance dentro de un proxy.
+ * WETH se envuelve con el ETH que Anvil le da a la cuenta. Los demás no se
+ * pueden emitir, así que se le sacan a su propio aToken de Aave —que guarda de
+ * sobra— con impersonación. Es más simple y menos frágil que calcular el slot
+ * de storage del balance dentro de un proxy.
  */
 async function acquire(asset: AssetSymbol, amount: bigint): Promise<void> {
-  if (asset === 'WETH') {
-    await send({
-      address: ADDRESSES.weth,
-      abi: wethAbi,
-      functionName: 'deposit',
-      value: amount,
-    })
+  const { address, funder } = ASSETS[asset]
+
+  if (!funder) {
+    await send({ address, abi: wethAbi, functionName: 'deposit', value: amount })
     return
   }
 
-  await testClient.impersonateAccount({ address: ADDRESSES.aUsdc })
-  await testClient.setBalance({ address: ADDRESSES.aUsdc, value: parseUnits('10', 18) })
+  await testClient.impersonateAccount({ address: funder })
+  // El aToken no tiene ETH propio: sin esto no puede pagar el gas del transfer.
+  await testClient.setBalance({ address: funder, value: parseUnits('10', 18) })
   await send({
-    from: ADDRESSES.aUsdc,
-    address: ADDRESSES.usdc,
+    from: funder,
+    address,
     abi: erc20Abi,
     functionName: 'transfer',
     args: [account.address, amount],
   })
-  await testClient.stopImpersonatingAccount({ address: ADDRESSES.aUsdc })
+  await testClient.stopImpersonatingAccount({ address: funder })
 }
 
 /**
