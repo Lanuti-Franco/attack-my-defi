@@ -5,7 +5,7 @@ import { installMockFeed, setAssetPrice } from './oracle'
 import { testClient } from '../chain/client'
 import { lowerLiquidationThreshold } from './riskParams'
 import { drainLiquidity } from './liquidityDrain'
-import { measureMarketImpact } from './marketImpact'
+import { slippageForSale } from './impactCurve'
 
 /**
  * Una mutación es un cambio de estado del mundo que aplicamos al fork antes de
@@ -76,11 +76,18 @@ export async function applyMutation(m: Mutation): Promise<void> {
   // Una liquidación ajena termina en una venta, y esa venta mueve el precio. El
   // impacto se cotiza contra los pools reales de Uniswap y después se aplica al
   // oráculo: el mercado se movió de verdad, así que el feed lo va a reflejar.
+  // La venta forzada se traduce a precio con la curva ya medida contra los
+  // pools reales del bloque pineado, en vez de cotizarla en vivo.
+  //
+  // El bloque está congelado, así que la curva no cambia entre corridas: los
+  // números son los mismos. Lo que cambia es el costo. Cotizar 25.000 WETH con
+  // el caché frío son cientos de lecturas de storage que el fork pide de a una,
+  // y eso hacía este vector inusable —minutos por sondeo, con timeouts—. El
+  // health factor lo sigue calculando Aave con el precio que resulta.
   if (m.type === 'marketSale') {
-    const impact = await measureMarketImpact(m.asset, m.amount)
     const addr = assetAddress(m.asset)
     await installMockFeed(addr)
-    await setAssetPrice(addr, basePriceOf(addr) * (1 - impact.slippage))
+    await setAssetPrice(addr, basePriceOf(addr) * (1 - slippageForSale(m.amount)))
     return
   }
 
