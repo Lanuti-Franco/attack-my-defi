@@ -1,14 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { StrategyInput } from '@/components/StrategyInput'
 import { AttackFeed } from '@/components/AttackFeed'
-import type { AttackEvent } from '@/lib/schemas/strategy'
+import { DEFAULT_STRATEGY, type AttackEvent, type Strategy } from '@/lib/schemas/strategy'
+import { vectorsFor } from '@/lib/ai/vectors'
 
 export default function Home() {
-  const [strategy, setStrategy] = useState({ supplyWeth: 100, borrowUsdc: 150_000 })
+  const [strategy, setStrategy] = useState<Strategy>(DEFAULT_STRATEGY)
+  const [vectorId, setVectorId] = useState('price')
   const [events, setEvents] = useState<AttackEvent[]>([])
   const [running, setRunning] = useState(false)
+
+  // Los vectores dependen de la estrategia: no tiene sentido ofrecer un depeg
+  // en una posición donde no hay stablecoin.
+  const vectors = useMemo(() => vectorsFor(strategy), [strategy])
+  const activeVector = vectors.some((v) => v.id === vectorId) ? vectorId : vectors[0].id
 
   async function attack() {
     setRunning(true)
@@ -18,7 +25,7 @@ export default function Home() {
       const res = await fetch('/api/attack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(strategy),
+        body: JSON.stringify({ strategy, vector: activeVector }),
       })
 
       if (!res.ok || !res.body) {
@@ -60,20 +67,20 @@ export default function Home() {
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-6 py-12">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-100">
-          Attack My DeFi
-        </h1>
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-100">Attack My DeFi</h1>
         <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-          Un atacante busca la caída de precio más chica que liquida tu posición. Cada
-          health factor que ves lo devuelve el contrato de Aave V3 sobre un fork de
-          Ethereum mainnet — ninguno lo calcula el modelo.
+          Un atacante busca el escenario más leve que liquida tu posición. Cada health factor
+          que ves lo devuelve el contrato de Aave V3 sobre un fork de Ethereum mainnet, y el
+          modelo que elige los escenarios corre entero en esta máquina.
         </p>
       </header>
 
       <StrategyInput
-        supplyWeth={strategy.supplyWeth}
-        borrowUsdc={strategy.borrowUsdc}
+        strategy={strategy}
         onChange={setStrategy}
+        vectors={vectors}
+        selectedVector={activeVector}
+        onSelectVector={setVectorId}
         onAttack={attack}
         running={running}
       />

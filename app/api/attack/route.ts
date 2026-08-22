@@ -1,5 +1,12 @@
+import { z } from 'zod'
 import { strategySchema } from '@/lib/schemas/strategy'
 import { runAttack } from '@/lib/ai/liquidator'
+import { vectorById } from '@/lib/ai/vectors'
+
+const requestSchema = z.object({
+  strategy: strategySchema,
+  vector: z.enum(['price', 'depeg', 'oracle']).default('price'),
+})
 
 /** El ataque corre simulaciones reales contra el fork: nada de esto se cachea. */
 export const dynamic = 'force-dynamic'
@@ -16,10 +23,19 @@ export async function POST(request: Request) {
     return Response.json({ error: 'El body no es JSON válido' }, { status: 400 })
   }
 
-  const parsed = strategySchema.safeParse(body)
+  const parsed = requestSchema.safeParse(body)
   if (!parsed.success) {
     return Response.json(
       { error: parsed.error.issues.map((i) => i.message).join('; ') },
+      { status: 400 },
+    )
+  }
+
+  const { strategy, vector: vectorId } = parsed.data
+  const vector = vectorById(strategy, vectorId)
+  if (!vector) {
+    return Response.json(
+      { error: `El vector "${vectorId}" no aplica a esta posición` },
       { status: 400 },
     )
   }
@@ -33,7 +49,7 @@ export async function POST(request: Request) {
       }
 
       try {
-        for await (const event of runAttack({ strategy: parsed.data })) {
+        for await (const event of runAttack({ strategy, vector })) {
           send(event)
         }
       } catch (err) {

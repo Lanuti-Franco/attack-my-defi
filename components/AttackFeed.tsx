@@ -87,6 +87,17 @@ export function AttackFeed({ events }: { events: AttackEvent[] }) {
                   </>
                 )}
                 <p className="text-sm leading-relaxed text-neutral-300">{ev.text}</p>
+
+                {ev.attackerProfitUsd !== undefined && (
+                  <div className="mt-4 flex items-baseline gap-3 border-t border-neutral-800 pt-4">
+                    <span className="text-xs uppercase tracking-widest text-neutral-500">
+                      Se lleva el atacante
+                    </span>
+                    <span className="font-mono text-2xl tabular-nums text-amber-400">
+                      ${fmtUsd(ev.attackerProfitUsd)}
+                    </span>
+                  </div>
+                )}
               </div>
             )
 
