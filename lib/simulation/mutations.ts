@@ -2,6 +2,7 @@ import type { Address } from 'viem'
 import { ADDRESSES, type AssetSymbol } from '../chain/addresses'
 import { readAssetPrice } from '../chain/aave'
 import { installMockFeed, setAssetPrice } from './oracle'
+import { testClient } from '../chain/client'
 
 /**
  * Una mutación es un cambio de estado del mundo que aplicamos al fork antes de
@@ -13,6 +14,8 @@ export type Mutation =
   | { type: 'priceShock'; asset: AssetSymbol; pct: number }
   /** Fija el precio de un activo en un valor absoluto en USD (depeg: USDC a 0.92) */
   | { type: 'priceSet'; asset: AssetSymbol; usd: number }
+  /** Adelanta el reloj del fork: la deuda crece por el interés variable */
+  | { type: 'advanceTime'; days: number }
 
 export function assetAddress(asset: AssetSymbol): Address {
   return asset === 'WETH' ? ADDRESSES.weth : ADDRESSES.usdc
@@ -25,11 +28,22 @@ export function describeMutation(m: Mutation): string {
       return `${m.asset} ${m.pct > 0 ? '+' : ''}${m.pct}%`
     case 'priceSet':
       return `${m.asset} a $${m.usd}`
+    case 'advanceTime':
+      return `+${Math.round(m.days)} días`
   }
 }
 
 /** Aplica una mutación sobre el fork. Idempotente respecto del snapshot base. */
 export async function applyMutation(m: Mutation): Promise<void> {
+  // Adelantar el reloj no toca precios: la deuda crece sola por el interés que
+  // Aave acumula. El snapshot también guarda el timestamp, así que el revert
+  // devuelve el reloj junto con el resto del estado.
+  if (m.type === 'advanceTime') {
+    await testClient.increaseTime({ seconds: Math.round(m.days * 24 * 60 * 60) })
+    await testClient.mine({ blocks: 1 })
+    return
+  }
+
   const addr = assetAddress(m.asset)
   await installMockFeed(addr)
 

@@ -28,7 +28,14 @@ export interface AttackVector {
    * el signo no se toca porque 0,75 no es lo mismo que -0,75.
    */
   scale: 'percent' | 'absolute'
+  /** Cómo se muestra en la UI: pensado para que lo lea una persona. */
   format(intensity: number): string
+  /**
+   * Cómo se le nombra un valor al modelo, en las unidades del parámetro que
+   * completa. Separado de `format` porque no son lo mismo: mostrar "+10 años"
+   * cuando el parámetro se mide en días hace que el modelo mande 10.
+   */
+  formatForModel?(intensity: number): string
   /** Qué le decimos al modelo que está buscando. */
   briefing: string
   paramName: string
@@ -39,7 +46,7 @@ export interface AttackVector {
   isOracleManipulation?: boolean
 }
 
-export type VectorId = 'price' | 'depeg' | 'oracle'
+export type VectorId = 'price' | 'depeg' | 'oracle' | 'time'
 
 /**
  * Movimiento adverso del activo volátil.
@@ -147,10 +154,50 @@ function oracleManipulation(strategy: Strategy): AttackVector {
   }
 }
 
+/**
+ * El paso del tiempo.
+ *
+ * No hace falta que el mercado se mueva ni que nadie ataque: la deuda a tasa
+ * variable crece sola, y una posición que arranca cerca del umbral se liquida
+ * por su propio interés. Es el riesgo que nadie mira porque no pasa nada.
+ *
+ * La tasa que se aplica es la que regía en el bloque pineado. En la vida real
+ * varía con la utilización del pool, así que el horizonte es una estimación con
+ * la tasa congelada, no una predicción.
+ */
+function timeDecay(): AttackVector {
+  return {
+    id: 'time',
+    label: 'El paso del tiempo',
+    premise: 'Nadie ataca y el precio no se mueve: tu deuda crece sola por el interés.',
+    mutate: (days) => [{ type: 'advanceTime', days }],
+    bounds: { safe: 0, extreme: 3650 },
+    scale: 'percent',
+    format: (days) => {
+      const d = Math.round(days)
+      if (d < 60) return `+${d} días`
+      const months = d / 30.44
+      return months < 24 ? `+${months.toFixed(1)} meses` : `+${(d / 365.25).toFixed(1)} años`
+    },
+    briefing:
+      'You are looking for how long it takes until the position becomes liquidatable on its own, ' +
+      'with no price movement at all. The debt grows because of the variable borrow rate. ' +
+      'Test a number of days.',
+    formatForModel: (days) => `${Math.round(days)} days`,
+    paramName: 'days',
+    paramDescription: 'How many days to let pass. 365 means one year.',
+  }
+}
+
 /** Los vectores que tienen sentido para una estrategia dada. */
 export function vectorsFor(strategy: Strategy): AttackVector[] {
   const depeg = stablecoinDepeg(strategy)
-  return [priceCrash(strategy), ...(depeg ? [depeg] : []), oracleManipulation(strategy)]
+  return [
+    priceCrash(strategy),
+    ...(depeg ? [depeg] : []),
+    oracleManipulation(strategy),
+    timeDecay(),
+  ]
 }
 
 export function vectorById(strategy: Strategy, id: VectorId): AttackVector | undefined {

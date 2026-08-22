@@ -79,11 +79,16 @@ async function chooseNextProbe(
 ): Promise<{ intensity: number; rationale: string } | null> {
   const { mildestKill, harshestSurvival } = bracketOf(probes, vector)
 
+  // Al modelo se le habla en las unidades del parámetro que completa, no en las
+  // que se muestran en pantalla. Decirle "+10 años" cuando el campo se mide en
+  // días hace que mande 10.
+  const say = (v: number) => (vector.formatForModel ?? vector.format)(v)
+
   const historyLines = probes.length
     ? probes
         .map(
           (p) =>
-            `${vector.format(p.intensity)} -> health factor ${p.healthFactor.toFixed(4)} (${
+            `${say(p.intensity)} -> health factor ${p.healthFactor.toFixed(4)} (${
               p.liquidated ? 'LIQUIDATABLE' : 'survived'
             })`,
         )
@@ -95,19 +100,19 @@ async function chooseNextProbe(
   // queda con un valor grueso; con el rango explícito, biseca.
   let guidance: string
   if (!probes.length) {
-    guidance = `Start with a severe scenario, around ${vector.format(vector.bounds.extreme)}, to confirm the position can be broken at all.`
+    guidance = `Start with a severe scenario, around ${say(vector.bounds.extreme)}, to confirm the position can be broken at all.`
   } else if (!mildestKill) {
-    guidance = `Nothing has liquidated it yet. The harshest tested is ${vector.format(
+    guidance = `Nothing has liquidated it yet. The harshest tested is ${say(
       harshestSurvival!.intensity,
     )}. Test something clearly more severe.`
   } else if (!harshestSurvival) {
-    guidance = `Everything tested liquidates it. The mildest is ${vector.format(
+    guidance = `Everything tested liquidates it. The mildest is ${say(
       mildestKill.intensity,
-    )}. Test something milder, closer to ${vector.format(vector.bounds.safe)}.`
+    )}. Test something milder, closer to ${say(vector.bounds.safe)}.`
   } else {
-    guidance = `The threshold is between ${vector.format(
+    guidance = `The threshold is between ${say(
       mildestKill.intensity,
-    )} (liquidates) and ${vector.format(
+    )} (liquidates) and ${say(
       harshestSurvival.intensity,
     )} (survives). Test the midpoint of that range.`
   }
