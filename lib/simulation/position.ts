@@ -1,57 +1,86 @@
 import { parseUnits, maxUint256, type Address } from 'viem'
-import { account } from '../chain/client'
-import { ADDRESSES, DECIMALS } from '../chain/addresses'
+import { account, testClient } from '../chain/client'
+import { ADDRESSES, ASSETS, type AssetSymbol } from '../chain/addresses'
 import { poolAbi, erc20Abi, wethAbi } from '../chain/aave'
 import { send } from '../chain/send'
 
+export interface Leg {
+  asset: AssetSymbol
+  amount: number
+}
+
 export interface StrategySpec {
-  /** WETH a depositar como colateral */
-  supplyWeth: number
-  /** USDC a pedir prestado */
-  borrowUsdc: number
+  collateral: Leg
+  debt: Leg
 }
 
 /**
- * Monta la estrategia como una posición real en el fork:
- * ETH → WETH → supply en Aave → borrow de USDC.
- * No es una simulación: son transacciones que Aave procesa.
+ * Consigue el activo dentro del fork para poder depositarlo.
+ *
+ * WETH se envuelve con el ETH que Anvil le da a la cuenta. USDC no se puede
+ * emitir, así que se toma prestado del aToken de Aave —que guarda ~180M— con
+ * impersonación. Es más simple y menos frágil que calcular el slot de storage
+ * del balance dentro de un proxy.
+ */
+async function acquire(asset: AssetSymbol, amount: bigint): Promise<void> {
+  if (asset === 'WETH') {
+    await send({
+      address: ADDRESSES.weth,
+      abi: wethAbi,
+      functionName: 'deposit',
+      value: amount,
+    })
+    return
+  }
+
+  await testClient.impersonateAccount({ address: ADDRESSES.aUsdc })
+  await testClient.setBalance({ address: ADDRESSES.aUsdc, value: parseUnits('10', 18) })
+  await send({
+    from: ADDRESSES.aUsdc,
+    address: ADDRESSES.usdc,
+    abi: erc20Abi,
+    functionName: 'transfer',
+    args: [account.address, amount],
+  })
+  await testClient.stopImpersonatingAccount({ address: ADDRESSES.aUsdc })
+}
+
+/**
+ * Monta la estrategia como una posición real en el fork: conseguir el colateral,
+ * depositarlo en Aave y tomar el préstamo. No es una simulación: son
+ * transacciones que Aave procesa y contra las que después se mide.
  */
 export async function buildPosition(spec: StrategySpec): Promise<Address> {
   const user = account.address
-  const wethAmount = parseUnits(spec.supplyWeth.toString(), DECIMALS.weth)
-  const usdcAmount = parseUnits(spec.borrowUsdc.toString(), DECIMALS.usdc)
+  const collateral = ASSETS[spec.collateral.asset]
+  const debt = ASSETS[spec.debt.asset]
 
-  // 1. Envolver ETH (la cuenta de Anvil arranca con 10.000 ETH)
-  await send({
-    address: ADDRESSES.weth,
-    abi: wethAbi,
-    functionName: 'deposit',
-    value: wethAmount,
-  })
+  const collateralAmount = parseUnits(spec.collateral.amount.toString(), collateral.decimals)
+  const debtAmount = parseUnits(spec.debt.amount.toString(), debt.decimals)
 
-  // 2. Aprobar al Pool
+  await acquire(spec.collateral.asset, collateralAmount)
+
   await send({
-    address: ADDRESSES.weth,
+    address: collateral.address,
     abi: erc20Abi,
     functionName: 'approve',
     args: [ADDRESSES.pool, maxUint256],
   })
 
-  // 3. Depositar como colateral
   await send({
     address: ADDRESSES.pool,
     abi: poolAbi,
     functionName: 'supply',
-    args: [ADDRESSES.weth, wethAmount, user, 0],
+    args: [collateral.address, collateralAmount, user, 0],
   })
 
-  // 4. Pedir prestado (interestRateMode 2 = variable)
-  if (usdcAmount > 0n) {
+  // interestRateMode 2 = variable
+  if (debtAmount > 0n) {
     await send({
       address: ADDRESSES.pool,
       abi: poolAbi,
       functionName: 'borrow',
-      args: [ADDRESSES.usdc, usdcAmount, 2n, 0, user],
+      args: [debt.address, debtAmount, 2n, 0, user],
     })
   }
 

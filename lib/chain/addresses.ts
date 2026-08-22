@@ -13,6 +13,13 @@ export const ADDRESSES = {
   // Activos
   weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+
+  /**
+   * aToken de USDC. Guarda el USDC depositado en Aave (~180M), así que en el
+   * fork lo impersonamos para fondear la cuenta de prueba: es más simple y menos
+   * frágil que calcular el slot de storage del balance de un proxy.
+   */
+  aUsdc: '0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c',
 } as const satisfies Record<string, Address>
 
 /** Cuenta 0 de Anvil. Clave pública y determinística: sólo existe en el fork. */
@@ -36,5 +43,10 @@ export const DECIMALS = {
   usdc: 6,
 } as const
 
-export const SYMBOLS = { WETH: 'weth', USDC: 'usdc' } as const
-export type AssetSymbol = keyof typeof SYMBOLS
+export type AssetSymbol = 'WETH' | 'USDC'
+
+/** Metadatos por activo, para no repetir decimales ni direcciones. */
+export const ASSETS = {
+  WETH: { address: ADDRESSES.weth, decimals: DECIMALS.weth, label: 'WETH' },
+  USDC: { address: ADDRESSES.usdc, decimals: DECIMALS.usdc, label: 'USDC' },
+} as const satisfies Record<AssetSymbol, { address: Address; decimals: number; label: string }>

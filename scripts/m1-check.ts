@@ -14,7 +14,10 @@
 import { ScenarioEngine } from '../lib/simulation/scenarioEngine'
 import { assertForkAlive } from '../lib/chain/client'
 
-const REFERENCE = { supplyWeth: 100, borrowUsdc: 150_000 }
+const REFERENCE = {
+  collateral: { asset: 'WETH' as const, amount: 100 },
+  debt: { asset: 'USDC' as const, amount: 150_000 },
+}
 const TOLERANCE = 0.05
 
 const fmt = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))

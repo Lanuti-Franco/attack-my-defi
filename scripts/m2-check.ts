@@ -8,7 +8,10 @@
 import { runAttack } from '../lib/ai/liquidator'
 import { ensureModel, releaseModel, MODEL_NAME } from '../lib/ai/localModel'
 
-const REFERENCE = { supplyWeth: 100, borrowUsdc: 150_000 }
+const REFERENCE = {
+  collateral: { asset: 'WETH' as const, amount: 100 },
+  debt: { asset: 'USDC' as const, amount: 150_000 },
+}
 const TOLERANCE = 1.0
 
 async function main() {
@@ -37,11 +40,11 @@ async function main() {
       case 'attempt':
         attempts++
         console.log(
-          `   ETH ${ev.shockPct.toFixed(2).padStart(7)}%  →  HF ${ev.healthFactor.toFixed(4).padStart(8)}  ${ev.verdict}`,
+          `   ${ev.label.padEnd(18)}  →  HF ${ev.healthFactor.toFixed(4).padStart(8)}  ${ev.verdict}`,
         )
         break
       case 'conclusion':
-        minimal = ev.minimalShockPct
+        minimal = ev.threshold
         console.log(`\n🤖 ${ev.text}`)
         break
       case 'error':

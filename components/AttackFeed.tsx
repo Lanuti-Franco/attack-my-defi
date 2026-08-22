@@ -52,9 +52,7 @@ export function AttackFeed({ events }: { events: AttackEvent[] }) {
                     : 'border-emerald-900/60 bg-emerald-950/20'
                 }`}
               >
-                <span className="w-24 shrink-0 text-neutral-400">
-                  ETH {ev.shockPct.toFixed(1)}%
-                </span>
+                <span className="w-32 shrink-0 text-neutral-400">{ev.label}</span>
                 <span className="w-28 shrink-0 text-neutral-500">
                   ${fmtUsd(ev.collateralUsd)}
                 </span>
@@ -78,13 +76,13 @@ export function AttackFeed({ events }: { events: AttackEvent[] }) {
                 key={i}
                 className="rounded-lg border border-neutral-600 bg-neutral-900 p-5"
               >
-                {ev.minimalShockPct !== null && (
+                {ev.thresholdLabel !== null && (
                   <>
                     <div className="text-xs uppercase tracking-widest text-neutral-500">
-                      Shock mínimo que la liquida
+                      {ev.vectorLabel} · umbral que la liquida
                     </div>
                     <div className="my-2 font-mono text-5xl font-bold tabular-nums text-red-400">
-                      {ev.minimalShockPct.toFixed(1)}%
+                      {ev.thresholdLabel}
                     </div>
                   </>
                 )}
