@@ -1,6 +1,12 @@
+# Layout plano de node_modules (como npm). Necesario porque los paquetes nativos
+# de QVAC/Bare no resuelven sus dependencias bajo el layout aislado de pnpm:
+# bare-runtime-darwin-arm64 se instala pero su dependencia require-asset no,
+# y bare-runtime reporta el fallo como "No binaries found for target darwin-arm64",
+# que apunta al lugar equivocado.
+nodeLinker: hoisted
+
 allowBuilds:
-  # esbuild instala su binario nativo en el postinstall. Llega como dependencia
-  # de tsx, que es devDependency y sólo se usa para correr los scripts de gate.
+  # esbuild instala su binario nativo en el postinstall. Llega vía tsx (devDep).
   esbuild: true
   sharp: false
   unrs-resolver: false

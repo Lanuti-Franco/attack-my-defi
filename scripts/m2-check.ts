@@ -6,15 +6,17 @@
  * (el atacante busca con precisión ~0,1, no hace bisección exhaustiva).
  */
 import { runAttack } from '../lib/ai/liquidator'
+import { ensureModel, releaseModel, MODEL_NAME } from '../lib/ai/localModel'
 
 const REFERENCE = { supplyWeth: 100, borrowUsdc: 150_000 }
 const TOLERANCE = 1.0
 
 async function main() {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('Falta ANTHROPIC_API_KEY en .env.local')
-    process.exit(1)
-  }
+  console.log(`cargando ${MODEL_NAME} (la primera vez descarga ~2,5 GB)...`)
+  await ensureModel((pct: number, stage: string) => {
+    if (pct % 25 === 0) console.log(`  ${stage}: ${pct}%`)
+  })
+  console.log('modelo listo\n')
 
   let attempts = 0
   let analytic: number | null = null
@@ -66,6 +68,7 @@ async function main() {
     process.exit(1)
   }
   console.log(`\n✅ GATE M2 PASA — ${attempts} simulaciones, desvío ${delta.toFixed(2)} puntos`)
+  await releaseModel()
 }
 
 main().catch((e) => {
