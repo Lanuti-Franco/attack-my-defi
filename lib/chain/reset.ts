@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, rmSync } from 'node:fs'
-import { testClient } from './client'
+import { publicClient, testClient } from './client'
+import { safeMessage } from './redact'
 
 /**
  * Dónde queda anotado el snapshot del mundo limpio.
@@ -52,7 +53,22 @@ async function refetchWorld(): Promise<void> {
     )
   }
 
-  await testClient.reset({ jsonRpcUrl, blockNumber: BigInt(pinned) })
+  // El proveedor a veces devuelve un 408 a mitad de la descarga, y perder la
+  // corrida entera por eso no tiene sentido cuando reintentar suele alcanzar.
+  let lastError: unknown
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await testClient.reset({ jsonRpcUrl, blockNumber: BigInt(pinned) })
+      return
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  throw new Error(
+    `El fork no pudo volver al bloque ${pinned} después de 3 intentos. ` +
+      `Último error: ${safeMessage(lastError)}`,
+  )
 }
 
 /**
@@ -85,6 +101,19 @@ export async function resetFork(): Promise<void> {
     // quedó vieja. Borrarla evita que el próximo proceso confíe en un id que
     // ahora podría apuntar a cualquier otra cosa.
     forgetPristine()
+  }
+
+  // Un Anvil recién levantado ya está en el estado que queremos: forkeado al
+  // bloque pineado y sin nada encima. Pedirle que se resetee ahí es pagar la
+  // descarga entera para llegar a donde ya estamos, y es justo el momento en
+  // que el proveedor tiene más chances de cortarnos con un timeout.
+  //
+  // Que el bloque no haya avanzado alcanza para saberlo: Anvil mina cada
+  // transacción, así que cualquier cosa que hayamos escrito lo movió.
+  const currentBlock = await publicClient.getBlockNumber()
+  if (currentBlock === BigInt(process.env.PINNED_BLOCK ?? -1)) {
+    rememberPristine(await testClient.snapshot())
+    return
   }
 
   await refetchWorld()

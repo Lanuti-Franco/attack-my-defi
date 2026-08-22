@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { strategySchema } from '@/lib/schemas/strategy'
 import { runAudit } from '@/lib/ai/audit'
+import { safeMessage } from '@/lib/chain/redact'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       } catch (err) {
         send({
           type: 'error',
-          message: err instanceof Error ? err.message : 'Error desconocido en la auditoría',
+          message: err instanceof Error ? safeMessage(err) : 'Error desconocido en la auditoría',
         })
       } finally {
         send({ type: 'done' })

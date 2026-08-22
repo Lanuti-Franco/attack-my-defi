@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { strategySchema } from '@/lib/schemas/strategy'
 import { runAttack } from '@/lib/ai/liquidator'
 import { vectorById } from '@/lib/ai/vectors'
+import { safeMessage } from '@/lib/chain/redact'
 
 const requestSchema = z.object({
   strategy: strategySchema,
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       } catch (err) {
         send({
           type: 'error',
-          message: err instanceof Error ? err.message : 'Error desconocido en el ataque',
+          message: err instanceof Error ? safeMessage(err) : 'Error desconocido en el ataque',
         })
       } finally {
         send({ type: 'done' })
