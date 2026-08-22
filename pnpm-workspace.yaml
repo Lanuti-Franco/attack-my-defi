@@ -1,4 +1,6 @@
 allowBuilds:
-  esbuild: set this to true or false
+  # esbuild instala su binario nativo en el postinstall. Llega como dependencia
+  # de tsx, que es devDependency y sólo se usa para correr los scripts de gate.
+  esbuild: true
   sharp: false
   unrs-resolver: false
