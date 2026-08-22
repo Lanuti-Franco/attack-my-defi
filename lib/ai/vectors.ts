@@ -46,7 +46,7 @@ export interface AttackVector {
   isOracleManipulation?: boolean
 }
 
-export type VectorId = 'price' | 'depeg' | 'oracle' | 'time' | 'governance'
+export type VectorId = 'price' | 'depeg' | 'oracle' | 'time' | 'governance' | 'liquidity'
 
 /**
  * Movimiento adverso del activo volátil.
@@ -219,6 +219,46 @@ function governanceRiskChange(strategy: Strategy): AttackVector {
   }
 }
 
+/** Horizonte fijo del vector de liquidez: la crisis se mide sobre un año. */
+const LIQUIDITY_HORIZON_DAYS = 365
+
+/**
+ * Una corrida de liquidez.
+ *
+ * Que el pool se quede sin fondos no te liquida por sí solo: te acelera el
+ * reloj. Cuando la utilización sube, la tasa variable se dispara y la deuda
+ * empieza a crecer mucho más rápido. Este vector busca cuánta liquidez tiene que
+ * irse para que el interés te alcance dentro del año.
+ *
+ * Se consume la liquidez pidiéndola prestada, que es como se consume de verdad.
+ * Sacarle los tokens al aToken no sirve: Aave V3 lleva contabilidad virtual del
+ * underlying y no se entera.
+ */
+function liquidityCrisis(strategy: Strategy): AttackVector {
+  const asset = strategy.debt.asset
+  return {
+    id: 'liquidity',
+    label: 'Una corrida de liquidez',
+    premise: `El pool de ${asset} se vacía, la tasa se dispara y tu deuda crece mucho más rápido.`,
+    mutate: (pct) => [
+      { type: 'drainLiquidity', asset, pct },
+      { type: 'advanceTime', days: LIQUIDITY_HORIZON_DAYS },
+    ],
+    bounds: { safe: 0, extreme: 99 },
+    scale: 'percent',
+    format: (pct) => `${pct.toFixed(0)}% de la liquidez`,
+    formatForModel: (pct) => `${pct.toFixed(0)} percent`,
+    briefing:
+      `You are looking for the smallest fraction of the ${asset} pool liquidity that has to be ` +
+      `borrowed away for the position to become liquidatable within one year. Draining liquidity ` +
+      `raises the variable borrow rate, which makes the debt grow faster.`,
+    paramName: 'liquidity_drained_pct',
+    paramDescription:
+      'What percentage of the available pool liquidity gets borrowed away. 90 means 90% of it.',
+    targetAsset: asset,
+  }
+}
+
 /** Los vectores que tienen sentido para una estrategia dada. */
 export function vectorsFor(strategy: Strategy): AttackVector[] {
   const depeg = stablecoinDepeg(strategy)
@@ -228,6 +268,7 @@ export function vectorsFor(strategy: Strategy): AttackVector[] {
     oracleManipulation(strategy),
     timeDecay(),
     governanceRiskChange(strategy),
+    liquidityCrisis(strategy),
   ]
 }
 

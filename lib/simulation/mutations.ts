@@ -4,6 +4,7 @@ import { readAssetPrice } from '../chain/aave'
 import { installMockFeed, setAssetPrice } from './oracle'
 import { testClient } from '../chain/client'
 import { lowerLiquidationThreshold } from './riskParams'
+import { drainLiquidity } from './liquidityDrain'
 
 /**
  * Una mutación es un cambio de estado del mundo que aplicamos al fork antes de
@@ -19,6 +20,8 @@ export type Mutation =
   | { type: 'advanceTime'; days: number }
   /** Governance le baja el umbral de liquidación al colateral, en puntos */
   | { type: 'lowerThreshold'; asset: AssetSymbol; points: number }
+  /** Una ballena consume liquidez del pool y dispara la tasa variable */
+  | { type: 'drainLiquidity'; asset: AssetSymbol; pct: number }
 
 export function assetAddress(asset: AssetSymbol): Address {
   return asset === 'WETH' ? ADDRESSES.weth : ADDRESSES.usdc
@@ -35,6 +38,8 @@ export function describeMutation(m: Mutation): string {
       return `+${Math.round(m.days)} días`
     case 'lowerThreshold':
       return `LT de ${m.asset} −${m.points.toFixed(1)} pts`
+    case 'drainLiquidity':
+      return `se va el ${m.pct.toFixed(0)}% de la liquidez`
   }
 }
 
@@ -53,6 +58,13 @@ export async function applyMutation(m: Mutation): Promise<void> {
   // lo que se mueve es la regla con la que Aave mide la posición.
   if (m.type === 'lowerThreshold') {
     await lowerLiquidationThreshold(assetAddress(m.asset), m.points)
+    return
+  }
+
+  // Consumir liquidez tampoco toca precios: sube la utilización del pool, y con
+  // ella la tasa variable a la que crece la deuda.
+  if (m.type === 'drainLiquidity') {
+    await drainLiquidity(m.asset, m.pct)
     return
   }
 
