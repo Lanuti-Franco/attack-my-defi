@@ -282,16 +282,23 @@ export async function* runAttack(opts: AttackOptions): AsyncGenerator<AttackEven
     const profit = await computeAttackerProfit({
       collateralAsset: opts.strategy.collateral.asset,
       debtUsd: base.debtUsd,
+      collateralUsd: base.collateralUsd,
       healthFactor: mildestKill.healthFactor,
       manipulatedPrice,
       marketPrice,
     })
-    attackerProfitUsd = profit.profitUsd
-    profitLine =
-      ` Con esa desviación, quien liquide repaga $${profit.debtRepaidUsd.toFixed(0)} y se lleva ` +
-      `colateral que en el mercado vale $${profit.collateralMarketValueUsd.toFixed(0)}: ` +
-      `$${profit.profitUsd.toFixed(0)} de ganancia, con el bonus de liquidación del ` +
-      `${(profit.liquidationBonus * 100).toFixed(1)}% que publica Aave.`
+
+    if (profit) {
+      attackerProfitUsd = profit.profitUsd
+      profitLine =
+        ` Con esa desviación, quien liquide repaga $${profit.debtRepaidUsd.toFixed(0)} y se lleva ` +
+        `colateral que en el mercado vale $${profit.collateralMarketValueUsd.toFixed(0)}: ` +
+        `$${profit.profitUsd.toFixed(0)} de ganancia, con el bonus de liquidación del ` +
+        `${(profit.liquidationBonus * 100).toFixed(1)}% que publica Aave.` +
+        (profit.cappedByCollateral
+          ? ' El colateral de la posición no alcanza para el bonus completo, así que se lleva todo lo que hay.'
+          : '')
+    }
   }
 
   yield {

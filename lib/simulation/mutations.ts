@@ -35,7 +35,7 @@ export async function applyMutation(m: Mutation): Promise<void> {
 
   switch (m.type) {
     case 'priceShock': {
-      const base = await basePriceOf(addr)
+      const base = basePriceOf(addr)
       await setAssetPrice(addr, base * (1 + m.pct / 100))
       return
     }
@@ -47,18 +47,33 @@ export async function applyMutation(m: Mutation): Promise<void> {
 }
 
 /**
- * Precio de referencia del activo, cacheado en el primer uso.
- * Se cachea para que un shock del -25% siempre parta del mismo precio, aunque
- * el mock ya haya sido movido por un escenario anterior.
+ * Precios de referencia: lo que valía cada activo con el mundo intacto.
+ *
+ * Se capturan una sola vez, antes de que exista ningún mock, y de ahí en más un
+ * shock del -25% siempre parte del mismo número. Leerlos perezosamente sería un
+ * error sutil: si un escenario fija primero el precio de un activo y después le
+ * aplica un shock, el "precio base" que leería sería el ya manipulado, y el
+ * resultado no correspondería a lo que el escenario dice estar probando.
  */
 const basePrices = new Map<Address, number>()
 
-export async function basePriceOf(asset: Address): Promise<number> {
+/** Captura los precios de referencia. Llamar con el fork recién armado. */
+export async function captureBasePrices(assets: AssetSymbol[]): Promise<void> {
+  for (const asset of assets) {
+    const addr = assetAddress(asset)
+    basePrices.set(addr, await readAssetPrice(addr))
+  }
+}
+
+export function basePriceOf(asset: Address): number {
   const cached = basePrices.get(asset)
-  if (cached !== undefined) return cached
-  const p = await readAssetPrice(asset)
-  basePrices.set(asset, p)
-  return p
+  if (cached === undefined) {
+    throw new Error(
+      `No hay precio de referencia para ${asset}. captureBasePrices() tiene que correr ` +
+        'con el fork intacto, antes de aplicar cualquier mutación.',
+    )
+  }
+  return cached
 }
 
 export function resetBasePrices(): void {

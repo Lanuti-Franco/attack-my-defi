@@ -21,6 +21,8 @@ export interface AttackerProfit {
   profitUsd: number
   /** Bonus de liquidación que publica Aave, en fracción */
   liquidationBonus: number
+  /** true si el colateral de la posición no alcanzaba para pagar el bonus completo */
+  cappedByCollateral: boolean
 }
 
 /**
@@ -35,30 +37,53 @@ export async function computeAttackerProfit(params: {
   collateralAsset: AssetSymbol
   /** Deuda total de la posición, en USD */
   debtUsd: number
+  /** Colateral de la posición, en USD al precio real de mercado */
+  collateralUsd: number
   /** Health factor con el precio manipulado */
   healthFactor: number
   /** Precio del colateral que reporta el oráculo manipulado */
   manipulatedPrice: number
   /** Precio del colateral en el mercado real, sin manipular */
   marketPrice: number
-}): Promise<AttackerProfit> {
+}): Promise<AttackerProfit | null> {
+  // Aave no permite liquidar una posición sana: sin eso, no hay ataque que valga.
+  if (params.healthFactor >= 1) return null
+
+  // Un precio de cero o negativo no es un escenario, es una división por cero
+  // disfrazada de hallazgo financiero.
+  if (!(params.manipulatedPrice > 0) || !(params.marketPrice > 0)) return null
+
   const { liquidationBonus } = await readReserveConfig(ASSETS[params.collateralAsset].address)
 
   const debtRepaidUsd = params.debtUsd * closeFactor(params.healthFactor)
 
   // El liquidador recibe colateral por el valor repagado más el bonus, contado
   // al precio que reporta el oráculo — que es justamente el precio mentido.
-  const collateralValueAtOracle = debtRepaidUsd * (1 + liquidationBonus)
-  const collateralSeized = collateralValueAtOracle / params.manipulatedPrice
+  const wantedValueAtOracle = debtRepaidUsd * (1 + liquidationBonus)
 
-  // Pero después lo vende en el mercado, que nunca se movió.
+  // Pero no puede llevarse más colateral del que la posición tiene. Sin este
+  // tope, un precio muy manipulado produce un atacante que se lleva más
+  // colateral del que existe y una ganancia inventada.
+  const availableUnits = params.collateralUsd / params.marketPrice
+  const wantedUnits = wantedValueAtOracle / params.manipulatedPrice
+  const collateralSeized = Math.min(wantedUnits, availableUnits)
+  const cappedByCollateral = wantedUnits > availableUnits
+
+  // Lo vende en el mercado, que nunca se movió.
   const collateralMarketValueUsd = collateralSeized * params.marketPrice
 
+  // Si el colateral no alcanzó, el liquidador sólo repaga la parte que puede
+  // cubrir: no regala deuda a cambio de nada.
+  const effectiveDebtRepaid = cappedByCollateral
+    ? (collateralSeized * params.manipulatedPrice) / (1 + liquidationBonus)
+    : debtRepaidUsd
+
   return {
-    debtRepaidUsd,
+    debtRepaidUsd: effectiveDebtRepaid,
     collateralSeized,
     collateralMarketValueUsd,
-    profitUsd: collateralMarketValueUsd - debtRepaidUsd,
+    profitUsd: collateralMarketValueUsd - effectiveDebtRepaid,
     liquidationBonus,
+    cappedByCollateral,
   }
 }

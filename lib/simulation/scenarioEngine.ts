@@ -2,7 +2,13 @@ import type { Address } from 'viem'
 import { testClient, assertForkAlive } from '../chain/client'
 import { readPosition, type PositionState } from '../chain/aave'
 import { buildPosition, type StrategySpec } from './position'
-import { applyMutation, describeMutation, resetBasePrices, type Mutation } from './mutations'
+import {
+  applyMutation,
+  captureBasePrices,
+  describeMutation,
+  resetBasePrices,
+  type Mutation,
+} from './mutations'
 import { forgetInstalledFeeds } from './oracle'
 import { resetFork } from '../chain/reset'
 
@@ -43,6 +49,13 @@ export class ScenarioEngine {
     forgetInstalledFeeds()
 
     this.user = await buildPosition(spec)
+
+    // Los precios de referencia se capturan ahora, con el mundo intacto y antes
+    // de que exista ningún mock. Si se leyeran perezosamente al aplicar la
+    // primera mutación, un escenario que combine dos mutaciones sobre el mismo
+    // activo tomaría como "precio base" uno que ya fue manipulado.
+    await captureBasePrices([spec.collateral.asset, spec.debt.asset])
+
     this.baseSnapshot = await testClient.snapshot()
     return readPosition(this.user)
   }
@@ -60,16 +73,22 @@ export class ScenarioEngine {
   async run(mutations: Mutation[]): Promise<ScenarioResult> {
     this.assertReady()
 
-    for (const m of mutations) await applyMutation(m)
-    const state = await readPosition(this.user!)
+    // El revert va en finally: si una mutación falla a mitad de camino, el mundo
+    // queda con el oráculo ya manipulado y el escenario siguiente mediría sobre
+    // un estado contaminado, produciendo un health factor que no corresponde a
+    // lo que dice haber probado.
+    try {
+      for (const m of mutations) await applyMutation(m)
+      const state = await readPosition(this.user!)
 
-    await this.revertToBase()
-
-    return {
-      mutations,
-      description: mutations.map(describeMutation).join(' · '),
-      state,
-      verdict: verdictOf(state.healthFactor),
+      return {
+        mutations,
+        description: mutations.map(describeMutation).join(' · '),
+        state,
+        verdict: verdictOf(state.healthFactor),
+      }
+    } finally {
+      await this.revertToBase()
     }
   }
 
@@ -79,10 +98,27 @@ export class ScenarioEngine {
   }
 
   private async revertToBase(): Promise<void> {
-    await testClient.revert({ id: this.baseSnapshot! })
-    // Un revert invalida el snapshot en Anvil: hay que tomar uno nuevo.
+    // Anvil devuelve false si el snapshot ya fue consumido o no existe. Si eso
+    // pasa y seguimos, el estado mutado se convierte en la nueva base y todos
+    // los escenarios posteriores miden sobre un mundo roto: preferimos romper
+    // ruidosamente antes que devolver números que no significan nada.
+    // Se llama al RPC directo en vez de testClient.revert() porque el helper de
+    // viem devuelve void y descarta justamente el booleano que nos interesa.
+    const reverted = (await testClient.request({
+      method: 'evm_revert',
+      params: [this.baseSnapshot!],
+    } as never)) as unknown as boolean
+
+    if (reverted !== true) {
+      this.baseSnapshot = null
+      throw new Error(
+        'El revert del fork falló: el estado quedó contaminado. Reiniciá el ataque.',
+      )
+    }
+
+    // Un revert consume el snapshot en Anvil: hay que tomar uno nuevo.
     this.baseSnapshot = await testClient.snapshot()
-    // Los contratos mock deployados después del snapshot dejaron de existir.
+    // Los mocks deployados después del snapshot dejaron de existir.
     forgetInstalledFeeds()
   }
 

@@ -58,21 +58,25 @@ export async function installMockFeed(asset: Address): Promise<Address> {
   if (!mock) throw new Error('El deploy del MockAggregator no devolvió dirección')
 
   // El ACLAdmin es un contrato de governance: hay que impersonarlo y darle gas.
+  // El stop va en finally para no dejar la cuenta impersonada si algo falla en
+  // el medio; una impersonación colgada afecta a todo lo que venga después.
   await testClient.impersonateAccount({ address: ADDRESSES.aclAdmin })
-  await testClient.setBalance({
-    address: ADDRESSES.aclAdmin,
-    value: parseUnits('10', 18),
-  })
+  try {
+    await testClient.setBalance({
+      address: ADDRESSES.aclAdmin,
+      value: parseUnits('10', 18),
+    })
 
-  await walletClient.writeContract({
-    account: ADDRESSES.aclAdmin,
-    address: ADDRESSES.oracle,
-    abi: oracleAbi,
-    functionName: 'setAssetSources',
-    args: [[asset], [mock]],
-  })
-
-  await testClient.stopImpersonatingAccount({ address: ADDRESSES.aclAdmin })
+    await walletClient.writeContract({
+      account: ADDRESSES.aclAdmin,
+      address: ADDRESSES.oracle,
+      abi: oracleAbi,
+      functionName: 'setAssetSources',
+      args: [[asset], [mock]],
+    })
+  } finally {
+    await testClient.stopImpersonatingAccount({ address: ADDRESSES.aclAdmin })
+  }
 
   // Verificación: Aave tiene que estar mirando nuestro feed.
   const source = await publicClient.readContract({
