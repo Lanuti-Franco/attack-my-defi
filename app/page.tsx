@@ -1,36 +1,29 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { NaturalLanguageInput } from '@/components/NaturalLanguageInput'
 import { StrategyInput } from '@/components/StrategyInput'
-import { AttackFeed } from '@/components/AttackFeed'
-import { DEFAULT_STRATEGY, type AttackEvent, type Strategy } from '@/lib/schemas/strategy'
-import { vectorsFor } from '@/lib/ai/vectors'
+import { AuditReport } from '@/components/AuditReport'
+import { DEFAULT_STRATEGY, type AuditEvent, type Strategy } from '@/lib/schemas/strategy'
 
 export default function Home() {
   const [strategy, setStrategy] = useState<Strategy>(DEFAULT_STRATEGY)
-  const [vectorId, setVectorId] = useState('price')
-  const [events, setEvents] = useState<AttackEvent[]>([])
+  const [events, setEvents] = useState<AuditEvent[]>([])
   const [running, setRunning] = useState(false)
 
-  // Los vectores dependen de la estrategia: no tiene sentido ofrecer un depeg
-  // en una posición donde no hay stablecoin.
-  const vectors = useMemo(() => vectorsFor(strategy), [strategy])
-  const activeVector = vectors.some((v) => v.id === vectorId) ? vectorId : vectors[0].id
-
-  async function attack() {
+  async function audit() {
     setRunning(true)
     setEvents([])
 
     try {
-      const res = await fetch('/api/attack', {
+      const res = await fetch('/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ strategy, vector: activeVector }),
+        body: JSON.stringify({ strategy }),
       })
 
       if (!res.ok || !res.body) {
-        const err = await res.json().catch(() => ({ error: 'El ataque no pudo arrancar' }))
+        const err = await res.json().catch(() => ({ error: 'La auditoría no pudo arrancar' }))
         setEvents([{ type: 'error', message: err.error }])
         return
       }
@@ -52,7 +45,7 @@ export default function Home() {
           if (!line.startsWith('data: ')) continue
           const payload = JSON.parse(line.slice(6))
           if (payload.type === 'done') continue
-          setEvents((prev) => [...prev, payload as AttackEvent])
+          setEvents((prev) => [...prev, payload as AuditEvent])
         }
       }
     } catch (err) {
@@ -70,9 +63,9 @@ export default function Home() {
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-neutral-100">Attack My DeFi</h1>
         <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-          Un atacante busca el escenario más leve que liquida tu posición. Cada health factor
-          que ves lo devuelve el contrato de Aave V3 sobre un fork de Ethereum mainnet, y el
-          modelo que elige los escenarios corre entero en esta máquina.
+          Seis ataques distintos contra tu posición en Aave, y qué tendrías que hacer para
+          sobrevivirlos. Cada health factor lo devuelve el contrato de Aave sobre un fork de
+          Ethereum mainnet, y el modelo que elige los escenarios corre entero en esta máquina.
         </p>
       </header>
 
@@ -82,16 +75,13 @@ export default function Home() {
         <StrategyInput
           strategy={strategy}
           onChange={setStrategy}
-          vectors={vectors}
-          selectedVector={activeVector}
-          onSelectVector={setVectorId}
-          onAttack={attack}
+          onAudit={audit}
           running={running}
         />
       </div>
 
       <div className="mt-8">
-        <AttackFeed events={events} />
+        <AuditReport events={events} />
       </div>
     </main>
   )

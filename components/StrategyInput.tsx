@@ -1,25 +1,18 @@
 'use client'
 
 import type { Strategy } from '@/lib/schemas/strategy'
-import type { AttackVector } from '@/lib/ai/vectors'
 
 const ASSETS = ['WETH', 'USDC'] as const
 
 export function StrategyInput({
   strategy,
   onChange,
-  vectors,
-  selectedVector,
-  onSelectVector,
-  onAttack,
+  onAudit,
   running,
 }: {
   strategy: Strategy
   onChange: (next: Strategy) => void
-  vectors: AttackVector[]
-  selectedVector: string
-  onSelectVector: (id: string) => void
-  onAttack: () => void
+  onAudit: () => void
   running: boolean
 }) {
   const setLeg = (leg: 'collateral' | 'debt', patch: Partial<Strategy['collateral']>) =>
@@ -56,33 +49,12 @@ export function StrategyInput({
         </p>
       )}
 
-      <div className="mt-6 mb-2 text-xs uppercase tracking-widest text-neutral-500">
-        Vector de ataque
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        {vectors.map((v) => (
-          <button
-            key={v.id}
-            onClick={() => onSelectVector(v.id)}
-            disabled={running}
-            className={`flex-1 rounded-md border px-4 py-3 text-left transition disabled:opacity-50 ${
-              selectedVector === v.id
-                ? 'border-red-600 bg-red-950/30'
-                : 'border-neutral-700 bg-neutral-950 hover:border-neutral-500'
-            }`}
-          >
-            <div className="text-sm font-semibold text-neutral-100">{v.label}</div>
-            <div className="mt-1 text-xs leading-snug text-neutral-500">{v.premise}</div>
-          </button>
-        ))}
-      </div>
-
       <button
-        onClick={onAttack}
+        onClick={onAudit}
         disabled={running || sameAsset}
         className="mt-5 h-12 w-full rounded-md bg-red-600 font-semibold tracking-wide text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-500"
       >
-        {running ? 'ATACANDO…' : 'ATACAME'}
+        {running ? 'AUDITANDO…' : 'ATACAME'}
       </button>
     </div>
   )
