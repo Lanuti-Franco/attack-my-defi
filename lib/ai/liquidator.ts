@@ -290,7 +290,7 @@ export async function* searchThreshold(opts: {
   // crash real el colateral vale de verdad lo que el feed dice.
   let attackerProfitUsd: number | undefined;
   let profitLine = "";
-  if (vector.isOracleManipulation && vector.targetAsset) {
+  if (vector.reportsOracleProfit && vector.targetAsset) {
     const marketPrice = await readAssetPrice(
       ASSETS[vector.targetAsset].address,
     );

@@ -43,8 +43,12 @@ export interface AttackVector {
   paramDescription: string
   /** El activo cuyo precio mueve este vector, si mueve alguno. */
   targetAsset?: AssetSymbol
-  /** Marca los vectores donde el precio de mercado no acompaña al del oráculo. */
-  isOracleManipulation?: boolean
+  /**
+   * Reporta cuánto se lleva quien liquida si la caída vino de un feed que
+   * mintió en vez del mercado. Sólo tiene sentido donde el precio del colateral
+   * es lo que se mueve.
+   */
+  reportsOracleProfit?: boolean
   /**
    * Trabajo caro que hace falta una vez por vector y no cambia entre escenarios.
    * Corre contra un snapshot propio, así no contamina a los demás vectores.
@@ -59,14 +63,7 @@ export interface AttackVector {
   survivedMessage: string
 }
 
-export type VectorId =
-  | 'price'
-  | 'depeg'
-  | 'oracle'
-  | 'time'
-  | 'governance'
-  | 'liquidity'
-  | 'cascade'
+export type VectorId = 'price' | 'depeg' | 'time' | 'governance' | 'liquidity' | 'cascade'
 
 /**
  * Movimiento adverso del activo volátil.
@@ -84,7 +81,8 @@ function priceCrash(strategy: Strategy): AttackVector {
     return {
       id: 'price',
       label: 'Caída de ETH',
-      premise: 'El mercado se desploma y tu colateral vale menos.',
+      premise:
+        'El precio que Aave usa para tu colateral baja, sea porque el mercado cayó o porque el feed falló.',
       mutate: (pct) => [{ type: 'priceShock', asset: 'WETH', pct }],
       bounds: { safe: 0, extreme: -80 },
       scale: 'percent',
@@ -147,36 +145,6 @@ function stablecoinDepeg(strategy: Strategy): AttackVector | null {
     survivedMessage:
       'Aguantás un USDC a 50 centavos, mucho peor que el mínimo histórico de $0,87 en marzo de 2023.',
     targetAsset: 'USDC',
-  }
-}
-
-/**
- * Manipulación del oráculo.
- *
- * Mueve el mismo precio que un crash, pero la premisa cambia todo: el mercado no
- * se movió, sólo miente el feed que Aave consulta. Por eso reporta algo que un
- * crash no puede reportar — cuánto se lleva el atacante liquidando a precio
- * falso colateral que sigue valiendo lo de antes.
- */
-function oracleManipulation(strategy: Strategy): AttackVector {
-  const asset = strategy.collateral.asset
-  return {
-    id: 'oracle',
-    label: 'Manipulación del oráculo',
-    premise: `El mercado no se movió: sólo miente el precio de ${asset} que Aave consulta.`,
-    mutate: (pct) => [{ type: 'priceShock', asset, pct }],
-    bounds: { safe: 0, extreme: -80 },
-    scale: 'percent',
-    format: (pct) => `feed ${asset} ${pct.toFixed(1)}%`,
-    briefing:
-      `You are looking for the smallest downward deviation in the ${asset} price feed that makes ` +
-      'the position liquidatable. The market price has not moved: only the oracle reports a lower value.',
-    paramName: 'deviation_pct',
-    paramDescription: `Downward deviation of the reported ${asset} price, in percent. Negative: -25 means the feed reports 25% below market.`,
-    survivedMessage:
-      'Ni un feed reportando un 80% de menos te liquida: estás fuera del alcance de un fallo de oráculo.',
-    targetAsset: asset,
-    isOracleManipulation: true,
   }
 }
 
@@ -319,7 +287,10 @@ function liquidationCascade(strategy: Strategy): AttackVector | null {
     label: 'Una cascada de liquidaciones',
     premise: 'Liquidan a otro, su colateral se vende al mercado y el precio te arrastra a vos.',
     mutate: (amount) => [{ type: 'marketSale', asset: 'WETH', amount }],
-    bounds: { safe: 0, extreme: 5000 },
+    // 25.000 WETH son unos 60 millones de dólares vendidos de golpe: más de lo
+    // que liquidó Aave en todo el día de marzo de 2020 o el de mayo de 2021.
+    // Arriba de eso ya no es una cascada, es un escenario que nunca ocurrió.
+    bounds: { safe: 0, extreme: 25_000 },
     scale: 'percent',
     format: (amount) => `liquidan ${Math.round(amount)} WETH`,
     formatForModel: (amount) => `${Math.round(amount)} WETH`,
@@ -330,7 +301,7 @@ function liquidationCascade(strategy: Strategy): AttackVector | null {
     paramName: 'weth_liquidated',
     paramDescription: 'How much WETH gets liquidated and sold into the market, in whole WETH.',
     survivedMessage:
-      'El mercado no tiene profundidad para arrastrarte: ni vendiendo 5.000 WETH de golpe el precio se mueve lo suficiente.',
+      'Ni una cascada de 25.000 WETH liquidados de golpe te arrastra: más de lo que Aave liquidó en todo el día de marzo de 2020.',
     targetAsset: 'WETH',
   }
 }
@@ -342,7 +313,6 @@ export function vectorsFor(strategy: Strategy): AttackVector[] {
   return [
     priceCrash(strategy),
     ...(depeg ? [depeg] : []),
-    oracleManipulation(strategy),
     timeDecay(),
     governanceRiskChange(strategy),
     liquidityCrisis(strategy),
