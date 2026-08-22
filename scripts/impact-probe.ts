@@ -4,7 +4,7 @@ import { measureMarketImpact } from '../lib/simulation/marketImpact'
 async function main() {
   console.log('venta de WETH en Uniswap V3 (pools reales del fork)\n')
   console.log('  cantidad     precio efectivo    slippage')
-  for (const amount of [10, 100, 500, 1000, 3000, 10000]) {
+  for (const amount of [1000, 5000, 10000, 20000, 40000, 80000, 150000]) {
     const i = await measureMarketImpact('WETH', amount)
     console.log(
       `  ${String(amount).padStart(6)} WETH   $${i.effectivePrice.toFixed(2).padStart(9)}    ${(i.slippage * 100).toFixed(2)}%`,

@@ -1,7 +1,7 @@
 import { parseUnits, formatUnits, parseAbi, type Address } from 'viem'
 import { publicClient, testClient, walletClient } from '../chain/client'
 import { ADDRESSES, ASSETS, type AssetSymbol } from '../chain/addresses'
-import { poolAbi, erc20Abi, wethAbi } from '../chain/aave'
+import { poolAbi, erc20Abi, wethAbi, readPosition } from '../chain/aave'
 import { privateKeyToAccount } from 'viem/accounts'
 
 const poolLiquidityAbi = parseAbi([
@@ -16,6 +16,61 @@ const WHALE = privateKeyToAccount(
   '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
 )
 
+/** Colateral de la ballena, en WETH. Sobra para lo que va a pedir prestado. */
+const WHALE_COLLATERAL_WETH = 400_000
+
+/**
+ * La ballena deposita WETH, así que sólo puede drenar mercados que no sean WETH:
+ * si intentara drenar WETH, su propio colateral aumentaría la liquidez del pool
+ * que quiere vaciar y el escenario mediría exactamente lo contrario de lo que
+ * dice medir.
+ */
+export function canDrain(asset: AssetSymbol): boolean {
+  return asset !== 'WETH'
+}
+
+/** true si la ballena ya tiene su colateral depositado en este estado del fork. */
+async function whaleIsFunded(): Promise<boolean> {
+  const state = await readPosition(WHALE.address)
+  return state.collateralUsd > 1
+}
+
+/**
+ * Deja a la ballena con colateral depositado, lista para pedir prestado.
+ *
+ * Separado del préstamo a propósito: depositar cientos de miles de WETH es la
+ * parte cara y no cambia entre escenarios, mientras que el préstamo es lo que
+ * define cada uno.
+ *
+ * Es idempotente: si ya tiene colateral, no vuelve a depositar. Sin eso, dos
+ * llamadas dejarían a la ballena con el doble de colateral y con ello más
+ * liquidez de WETH en el pool de la que había.
+ */
+export async function fundWhale(): Promise<void> {
+  if (await whaleIsFunded()) return
+
+  await testClient.setBalance({ address: WHALE.address, value: parseUnits('2000000', 18) })
+
+  const collateral = parseUnits(String(WHALE_COLLATERAL_WETH), ASSETS.WETH.decimals)
+  await whaleSend(ADDRESSES.weth, wethAbi, 'deposit', [], collateral)
+  await whaleSend(ADDRESSES.weth, erc20Abi, 'approve', [ADDRESSES.pool, collateral])
+  await whaleSend(ADDRESSES.pool, poolAbi, 'supply', [
+    ADDRESSES.weth,
+    collateral,
+    WHALE.address,
+    0,
+  ])
+}
+
+export interface DrainResult {
+  /** Unidades del activo que la ballena se llevó prestadas */
+  drainedUnits: number
+  /** Unidades que quedan disponibles en el pool */
+  remainingUnits: number
+  /** Health factor de la ballena después de pedir prestado */
+  whaleHealthFactor: number
+}
+
 /**
  * Consume liquidez del pool pidiéndola prestada, como en una corrida real.
  *
@@ -25,37 +80,30 @@ const WHALE = privateKeyToAccount(
  * contra ese tipo de manipulación. La única forma de subir la utilización de
  * verdad es tomar los préstamos.
  *
- * La ballena se fondea con `anvil_setBalance`, deposita WETH y pide prestado el
- * porcentaje pedido de la liquidez disponible.
+ * @param percentOfAvailable Porcentaje de la liquidez disponible, de 0 a 100.
  */
-/**
- * Deja a la ballena con colateral depositado, lista para pedir prestado.
- *
- * Separado del préstamo a propósito: depositar colateral es la parte cara
- * (envolver y depositar cientos de miles de WETH) y la que se puede reutilizar
- * entre escenarios, mientras que el préstamo es lo que define cada escenario.
- */
-export async function fundWhale(): Promise<void> {
-  await testClient.setBalance({ address: WHALE.address, value: parseUnits('2000000', 18) })
-
-  const collateralWeth = parseUnits('400000', 18)
-  await whaleSend(ADDRESSES.weth, wethAbi, 'deposit', [], collateralWeth)
-  await whaleSend(ADDRESSES.weth, erc20Abi, 'approve', [ADDRESSES.pool, collateralWeth])
-  await whaleSend(ADDRESSES.pool, poolAbi, 'supply', [
-    ADDRESSES.weth,
-    collateralWeth,
-    WHALE.address,
-    0,
-  ])
-}
-
 export async function drainLiquidity(
   asset: AssetSymbol,
-  pctOfAvailable: number,
+  percentOfAvailable: number,
   opts: { alreadyFunded?: boolean } = {},
-): Promise<{ drainedUsd: number; remainingUsd: number }> {
+): Promise<DrainResult> {
+  if (!canDrain(asset)) {
+    throw new Error(
+      `No se puede drenar el pool de ${asset}: la ballena lo usa como colateral y lo haría ` +
+        'más líquido en vez de vaciarlo.',
+    )
+  }
+  if (!(percentOfAvailable >= 0 && percentOfAvailable <= 100)) {
+    throw new Error(`percentOfAvailable tiene que estar entre 0 y 100, llegó ${percentOfAvailable}`)
+  }
+
   const target = ASSETS[asset]
 
+  if (!opts.alreadyFunded) await fundWhale()
+
+  // La liquidez se mide después de fondear a la ballena: si se midiera antes, el
+  // depósito de colateral podría cambiarla y el porcentaje se calcularía sobre
+  // un número que ya no existe.
   const available = await publicClient.readContract({
     address: ADDRESSES.pool,
     abi: poolLiquidityAbi,
@@ -63,23 +111,16 @@ export async function drainLiquidity(
     args: [target.address],
   })
 
-  const toBorrow = (available * BigInt(Math.round(pctOfAvailable * 100))) / 10_000n
-  if (toBorrow === 0n) {
-    return {
-      drainedUsd: 0,
-      remainingUsd: Number(formatUnits(available, target.decimals)),
-    }
+  const toBorrow = (available * BigInt(Math.round(percentOfAvailable * 100))) / 10_000n
+  if (toBorrow > 0n) {
+    await whaleSend(ADDRESSES.pool, poolAbi, 'borrow', [
+      target.address,
+      toBorrow,
+      2n,
+      0,
+      WHALE.address,
+    ])
   }
-
-  if (!opts.alreadyFunded) await fundWhale()
-
-  await whaleSend(ADDRESSES.pool, poolAbi, 'borrow', [
-    target.address,
-    toBorrow,
-    2n,
-    0,
-    WHALE.address,
-  ])
 
   const left = await publicClient.readContract({
     address: ADDRESSES.pool,
@@ -88,9 +129,22 @@ export async function drainLiquidity(
     args: [target.address],
   })
 
+  // Una ballena al borde de la liquidación es una segunda posición en riesgo
+  // dentro del escenario, y no es lo que se está midiendo. Si queda cerca de 1,
+  // el escenario no es válido.
+  const whale = await readPosition(WHALE.address)
+  if (whale.healthFactor < 1.5) {
+    throw new Error(
+      `La ballena quedó con health factor ${whale.healthFactor.toFixed(2)} al drenar el ` +
+        `${percentOfAvailable}% del pool: sería liquidable ella misma y el escenario dejaría ` +
+        'de medir sólo tu posición.',
+    )
+  }
+
   return {
-    drainedUsd: Number(formatUnits(toBorrow, target.decimals)),
-    remainingUsd: Number(formatUnits(left, target.decimals)),
+    drainedUnits: Number(formatUnits(toBorrow, target.decimals)),
+    remainingUnits: Number(formatUnits(left, target.decimals)),
+    whaleHealthFactor: whale.healthFactor,
   }
 }
 
