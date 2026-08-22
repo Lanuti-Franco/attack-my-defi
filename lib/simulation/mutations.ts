@@ -3,6 +3,7 @@ import { ADDRESSES, type AssetSymbol } from '../chain/addresses'
 import { readAssetPrice } from '../chain/aave'
 import { installMockFeed, setAssetPrice } from './oracle'
 import { testClient } from '../chain/client'
+import { lowerLiquidationThreshold } from './riskParams'
 
 /**
  * Una mutación es un cambio de estado del mundo que aplicamos al fork antes de
@@ -16,6 +17,8 @@ export type Mutation =
   | { type: 'priceSet'; asset: AssetSymbol; usd: number }
   /** Adelanta el reloj del fork: la deuda crece por el interés variable */
   | { type: 'advanceTime'; days: number }
+  /** Governance le baja el umbral de liquidación al colateral, en puntos */
+  | { type: 'lowerThreshold'; asset: AssetSymbol; points: number }
 
 export function assetAddress(asset: AssetSymbol): Address {
   return asset === 'WETH' ? ADDRESSES.weth : ADDRESSES.usdc
@@ -30,6 +33,8 @@ export function describeMutation(m: Mutation): string {
       return `${m.asset} a $${m.usd}`
     case 'advanceTime':
       return `+${Math.round(m.days)} días`
+    case 'lowerThreshold':
+      return `LT de ${m.asset} −${m.points.toFixed(1)} pts`
   }
 }
 
@@ -41,6 +46,13 @@ export async function applyMutation(m: Mutation): Promise<void> {
   if (m.type === 'advanceTime') {
     await testClient.increaseTime({ seconds: Math.round(m.days * 24 * 60 * 60) })
     await testClient.mine({ blocks: 1 })
+    return
+  }
+
+  // Cambiar parámetros de riesgo tampoco toca precios: el mercado queda igual y
+  // lo que se mueve es la regla con la que Aave mide la posición.
+  if (m.type === 'lowerThreshold') {
+    await lowerLiquidationThreshold(assetAddress(m.asset), m.points)
     return
   }
 

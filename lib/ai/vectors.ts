@@ -46,7 +46,7 @@ export interface AttackVector {
   isOracleManipulation?: boolean
 }
 
-export type VectorId = 'price' | 'depeg' | 'oracle' | 'time'
+export type VectorId = 'price' | 'depeg' | 'oracle' | 'time' | 'governance'
 
 /**
  * Movimiento adverso del activo volátil.
@@ -189,6 +189,36 @@ function timeDecay(): AttackVector {
   }
 }
 
+/**
+ * Un voto de governance.
+ *
+ * Aave ajusta los parámetros de riesgo de sus activos con cierta regularidad.
+ * Bajarle el umbral de liquidación a un colateral vuelve liquidables posiciones
+ * que no se movieron: es el único vector donde el mercado queda intacto y lo que
+ * cambia es la regla con la que se te mide.
+ */
+function governanceRiskChange(strategy: Strategy): AttackVector {
+  const asset = strategy.collateral.asset
+  return {
+    id: 'governance',
+    label: 'Un voto de governance',
+    premise: `Aave le baja el umbral de liquidación al ${asset} y tu posición pasa a liquidable sin que el mercado se mueva.`,
+    mutate: (points) => [{ type: 'lowerThreshold', asset, points }],
+    bounds: { safe: 0, extreme: 40 },
+    scale: 'percent',
+    format: (points) => `LT −${points.toFixed(1)} pts`,
+    formatForModel: (points) => `${points.toFixed(1)} percentage points`,
+    briefing:
+      `You are looking for the smallest reduction of the ${asset} liquidation threshold that makes ` +
+      'the position liquidatable. Nothing else changes: no price moves. Aave governance simply ' +
+      'lowers how much it is willing to lend against this collateral.',
+    paramName: 'threshold_drop_points',
+    paramDescription:
+      'How many percentage points to lower the liquidation threshold by. 5 means it goes from 83% to 78%.',
+    targetAsset: asset,
+  }
+}
+
 /** Los vectores que tienen sentido para una estrategia dada. */
 export function vectorsFor(strategy: Strategy): AttackVector[] {
   const depeg = stablecoinDepeg(strategy)
@@ -197,6 +227,7 @@ export function vectorsFor(strategy: Strategy): AttackVector[] {
     ...(depeg ? [depeg] : []),
     oracleManipulation(strategy),
     timeDecay(),
+    governanceRiskChange(strategy),
   ]
 }
 

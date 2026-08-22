@@ -16,6 +16,10 @@ export const oracleAbi = parseAbi([
   'function BASE_CURRENCY_UNIT() view returns (uint256)',
 ])
 
+export const configuratorAbi = parseAbi([
+  'function configureReserveAsCollateral(address asset, uint256 ltv, uint256 liquidationThreshold, uint256 liquidationBonus)',
+])
+
 export const erc20Abi = parseAbi([
   'function balanceOf(address) view returns (uint256)',
   'function approve(address spender, uint256 amount) returns (bool)',

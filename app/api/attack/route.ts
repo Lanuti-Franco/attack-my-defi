@@ -5,7 +5,7 @@ import { vectorById } from '@/lib/ai/vectors'
 
 const requestSchema = z.object({
   strategy: strategySchema,
-  vector: z.enum(['price', 'depeg', 'oracle', 'time']).default('price'),
+  vector: z.enum(['price', 'depeg', 'oracle', 'time', 'governance']).default('price'),
 })
 
 /** El ataque corre simulaciones reales contra el fork: nada de esto se cachea. */

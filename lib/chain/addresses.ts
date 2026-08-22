@@ -9,6 +9,8 @@ export const ADDRESSES = {
   aclManager: '0xc2aaCf6553D20d1e9d78E365AAba8032af9c85b0',
   /** Governance executor: tiene POOL_ADMIN_ROLE, es a quien impersonamos. */
   aclAdmin: '0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A',
+  /** Quien puede cambiar los parámetros de riesgo de una reserva. */
+  poolConfigurator: '0x64b761D848206f447Fe2dd461b0c635Ec39EbB27',
 
   // Activos
   weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
