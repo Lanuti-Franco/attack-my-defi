@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { NaturalLanguageInput } from '@/components/NaturalLanguageInput'
 import { StrategyInput } from '@/components/StrategyInput'
 import { AttackFeed } from '@/components/AttackFeed'
 import { DEFAULT_STRATEGY, type AttackEvent, type Strategy } from '@/lib/schemas/strategy'
@@ -75,15 +76,19 @@ export default function Home() {
         </p>
       </header>
 
-      <StrategyInput
-        strategy={strategy}
-        onChange={setStrategy}
-        vectors={vectors}
-        selectedVector={activeVector}
-        onSelectVector={setVectorId}
-        onAttack={attack}
-        running={running}
-      />
+      <NaturalLanguageInput onParsed={setStrategy} disabled={running} />
+
+      <div className="mt-4">
+        <StrategyInput
+          strategy={strategy}
+          onChange={setStrategy}
+          vectors={vectors}
+          selectedVector={activeVector}
+          onSelectVector={setVectorId}
+          onAttack={attack}
+          running={running}
+        />
+      </div>
 
       <div className="mt-8">
         <AttackFeed events={events} />
