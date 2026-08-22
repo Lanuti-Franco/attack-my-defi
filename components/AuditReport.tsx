@@ -1,9 +1,25 @@
 'use client'
 
 import type { AuditEvent, RecommendationView } from '@/lib/schemas/strategy'
+import { Window, ProgressBar } from '@/components/win95/Window'
+import { HealthBar } from '@/components/win95/HealthBar'
 
 const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))
+
+/**
+ * Cada vector ataca de una forma distinta, y el ícono lo dice antes que el
+ * texto: la catapulta pega de frente, el ariete es la masa que arrastra, el
+ * reloj es el asedio que gana esperando.
+ */
+const UNIT: Record<string, string> = {
+  price: '🪨',
+  depeg: '🧪',
+  time: '⏳',
+  governance: '📜',
+  liquidity: '🕳️',
+  cascade: '🐏',
+}
 
 interface VectorRun {
   id: string
@@ -68,148 +84,195 @@ export function AuditReport({ events }: { events: AuditEvent[] }) {
   if (!position && !errors.length) return null
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {position && (
-        <section className="rounded-lg border border-neutral-700 bg-neutral-900/60 p-5">
-          <div className="mb-3 text-xs uppercase tracking-widest text-neutral-500">
-            Posición montada en el fork
-          </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+        <Window title="Tu posición — Aave V3" icon="🏰" opening>
+          <HealthBar healthFactor={position.healthFactor} label="Resistencia de la posición" />
+
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
             <Stat label="Colateral" value={usd(position.collateralUsd)} />
             <Stat label="Deuda" value={usd(position.debtUsd)} />
             <Stat
-              label="Liq. threshold"
+              label="Umbral de liquidación"
               value={`${(position.liquidationThreshold * 100).toFixed(0)}%`}
             />
-            <Stat label="Health factor" value={hf(position.healthFactor)} accent />
-          </div>
-        </section>
+          </dl>
+        </Window>
       )}
 
-      {vectors.map((v) => (
-        <section key={v.id} className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-100">{v.label}</h3>
-              <p className="mt-0.5 text-xs text-neutral-500">{v.premise}</p>
-            </div>
-            {v.done && (
-              <span
-                className={`font-mono text-lg tabular-nums ${
-                  v.thresholdLabel ? 'text-red-400' : 'text-emerald-400'
-                }`}
-              >
-                {v.thresholdLabel ?? 'sobrevive'}
-              </span>
-            )}
-          </div>
-
-          {v.attempts.length > 0 && (
-            <div className="mt-3 flex flex-col gap-1">
-              {v.attempts.map((a, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 rounded px-2 py-1 font-mono text-xs ${
-                    a.verdict === 'LIQUIDATABLE' ? 'bg-red-950/30' : 'bg-emerald-950/20'
-                  }`}
-                >
-                  <span className="w-40 shrink-0 text-neutral-400">{a.label}</span>
-                  <span className="flex-1 tabular-nums text-neutral-200">HF {hf(a.healthFactor)}</span>
-                  <span
-                    className={
-                      a.verdict === 'LIQUIDATABLE'
-                        ? 'text-red-400'
-                        : 'text-emerald-400'
-                    }
-                  >
-                    {a.verdict === 'LIQUIDATABLE' ? 'LIQUIDABLE' : 'SOBREVIVE'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {v.done && !v.thresholdLabel && v.survivedMessage && (
-            <p className="mt-3 border-t border-neutral-800 pt-3 text-sm leading-relaxed text-emerald-300/80">
-              {v.survivedMessage}
-            </p>
-          )}
-
-          {v.attackerProfitUsd !== undefined && (
-            <div className="mt-3 flex items-baseline gap-2 border-t border-neutral-800 pt-3">
-              <span className="text-xs uppercase tracking-widest text-neutral-500">
-                Se lleva el atacante
-              </span>
-              <span className="font-mono text-lg tabular-nums text-amber-400">
-                {usd(v.attackerProfitUsd)}
-              </span>
-            </div>
-          )}
-        </section>
+      {vectors.map((v, i) => (
+        <VectorWindow key={v.id} run={v} index={i} />
       ))}
 
-      {recommendations.length > 0 && (
-        <section className="rounded-lg border border-neutral-600 bg-neutral-900 p-5">
-          <div className="mb-1 text-xs uppercase tracking-widest text-neutral-500">
-            Qué hacer al respecto
-          </div>
-          <p className="mb-4 text-xs text-neutral-500">
-            La pregunta no es cuánto puede caer el precio, sino a qué querés sobrevivir.
-          </p>
-
-          <div className="flex flex-col gap-3">
-            {recommendations.map((r) => (
-              <div
-                key={r.profileId}
-                className="rounded-md border border-neutral-800 bg-neutral-950 p-4"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-sm font-semibold text-neutral-100">{r.profileLabel}</span>
-                  <span className="text-xs text-neutral-500">sobrevive {r.benchmark}</span>
-                </div>
-
-                {r.alreadySafe ? (
-                  <p className="mt-2 text-sm text-emerald-400">
-                    Tu posición ya lo aguanta, con health factor {hf(r.resultingHealthFactor)}.
-                  </p>
-                ) : (
-                  <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                    <span className="font-mono text-2xl tabular-nums text-neutral-100">
-                      repagá {usd(r.repayUsd)}
-                    </span>
-                    <span className="text-xs text-neutral-500">
-                      deuda máxima {usd(r.maxDebtUsd)} · quedarías en HF{' '}
-                      {hf(r.resultingHealthFactor)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {recommendations.length > 0 && <Recommendations items={recommendations} />}
 
       {errors.map((e, i) => (
-        <div
-          key={i}
-          className="rounded-lg border border-amber-800 bg-amber-950/30 p-4 text-sm text-amber-200"
-        >
-          {e}
-        </div>
+        <Window key={i} title="Error" icon="⛔">
+          <p className="font-mono text-[12px] leading-relaxed">{e}</p>
+        </Window>
       ))}
     </div>
   )
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+/**
+ * Una ventana por vector. Mientras ataca muestra los intentos que va haciendo;
+ * si encuentra por dónde entrar, la ventana se convierte en la pantalla azul
+ * del sistema, que es lo que significa: tu posición dejó de responder.
+ */
+function VectorWindow({ run, index }: { run: VectorRun; index: number }) {
+  const dead = run.done && run.thresholdLabel !== null
+  const last = run.attempts.at(-1)
+
+  return (
+    <Window
+      title={run.label}
+      icon={UNIT[run.id] ?? '⚔️'}
+      tone={dead ? 'dead' : 'normal'}
+      active={!run.done || dead}
+      opening
+      className={index > 0 ? 'sm:ml-6' : ''}
+    >
+      {dead ? (
+        <BlueScreen run={run} />
+      ) : (
+        <>
+          <p className="font-mono mb-3 text-[12px] leading-relaxed text-(--ink-soft)">
+            {run.premise}
+          </p>
+
+          {!run.done && <ProgressBar value={null} />}
+
+          {run.attempts.length > 0 && (
+            <ol className="sunken font-mono mt-3 max-h-44 overflow-y-auto bg-(--field) p-2 text-[12px]">
+              {run.attempts.map((a, i) => (
+                <li key={i} className="flex items-baseline gap-2 py-[2px]">
+                  <span aria-hidden className="w-3 shrink-0">
+                    {a.verdict === 'LIQUIDATABLE' ? '☠' : '·'}
+                  </span>
+                  <span className="flex-1 truncate">{a.label}</span>
+                  <span className="tabular-nums">HF {hf(a.healthFactor)}</span>
+                </li>
+              ))}
+              {!run.done && (
+                <li aria-hidden className="blink py-[2px] pl-5">
+                  █
+                </li>
+              )}
+            </ol>
+          )}
+
+          {!run.done && !run.attempts.length && (
+            <p className="font-mono mt-2 text-[11px] text-(--ink-soft)">
+              El modelo está eligiendo por dónde entrar…
+            </p>
+          )}
+
+          {run.done && (
+            <div className="mt-3 flex items-start gap-2 border-t-2 border-(--chrome-shadow) pt-3">
+              <span aria-hidden className="text-[16px] leading-none">
+                🛡️
+              </span>
+              <p className="font-mono text-[12px] leading-relaxed">{run.survivedMessage}</p>
+            </div>
+          )}
+
+          {last && !run.done && (
+            <p className="font-mono mt-2 text-[11px] text-(--ink-soft)">
+              último sondeo: {last.label}
+            </p>
+          )}
+        </>
+      )}
+    </Window>
+  )
+}
+
+/** El momento en que la posición cae, contado como lo contaba el sistema. */
+function BlueScreen({ run }: { run: VectorRun }) {
+  const killer = run.attempts.findLast((a) => a.verdict === 'LIQUIDATABLE')
+
+  return (
+    <div className="font-mono text-[12px] leading-relaxed text-white">
+      <p className="font-chrome mx-auto mb-4 w-fit bg-(--chrome-lit) px-2 py-[2px] text-[11px] text-(--bsod)">
+        Attack My DeFi
+      </p>
+
+      <p>Tu posición dejó de responder.</p>
+
+      <p className="mt-3">
+        El ataque que la volteó: <span className="font-semibold">{run.label}</span>.
+      </p>
+
+      <p className="mt-3 pl-4">
+        Alcanza con <span className="text-[15px] font-semibold">{run.thresholdLabel}</span>
+        {killer && <> para dejarte en HF {hf(killer.healthFactor)}</>}.
+      </p>
+
+      {run.attackerProfitUsd !== undefined && (
+        <p className="mt-3 pl-4">
+          Quien te liquide se lleva{' '}
+          <span className="text-[15px] font-semibold">{usd(run.attackerProfitUsd)}</span> si el
+          precio venía de un feed y no del mercado.
+        </p>
+      )}
+
+      <p className="mt-4">
+        Se hicieron {run.attempts.length} sondeos contra el fork. Cada health factor lo devolvió
+        el contrato de Aave.
+      </p>
+
+      <p className="mt-4">
+        Presione cualquier tecla para continuar <span className="blink">_</span>
+      </p>
+    </div>
+  )
+}
+
+/** El cierre: no cuánto puede caer el precio, sino a qué querés sobrevivir. */
+function Recommendations({ items }: { items: RecommendationView[] }) {
+  return (
+    <Window title="Qué hacer al respecto — Bloc de notas" icon="📝" opening>
+      <p className="font-mono mb-3 text-[12px] leading-relaxed text-(--ink-soft)">
+        La pregunta no es cuánto puede caer el precio, sino a qué querés sobrevivir.
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {items.map((r) => (
+          <div key={r.profileId} className="sunken bg-(--field) p-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="font-chrome text-[11px]">{r.profileLabel}</span>
+              <span className="font-mono text-[11px] text-(--ink-soft)">
+                sobrevive {r.benchmark}
+              </span>
+            </div>
+
+            {r.alreadySafe ? (
+              <p className="font-mono mt-2 text-[12px] text-(--hp-high)">
+                Tu posición ya lo aguanta, con health factor {hf(r.resultingHealthFactor)}.
+              </p>
+            ) : (
+              <p className="font-mono mt-2 text-[12px]">
+                <span className="text-[17px] font-semibold tabular-nums">
+                  repagá {usd(r.repayUsd)}
+                </span>
+                <span className="mt-1 block text-(--ink-soft)">
+                  deuda máxima {usd(r.maxDebtUsd)} · quedarías en HF {hf(r.resultingHealthFactor)}
+                </span>
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </Window>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs text-neutral-500">{label}</div>
-      <div
-        className={`font-mono text-xl tabular-nums ${accent ? 'text-emerald-400' : 'text-neutral-100'}`}
-      >
-        {value}
-      </div>
+      <dt className="font-chrome text-[9px] text-(--ink-soft)">{label}</dt>
+      <dd className="font-mono text-[15px] font-semibold tabular-nums">{value}</dd>
     </div>
   )
 }

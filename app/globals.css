@@ -1,32 +1,180 @@
 @import "tailwindcss";
 
 /*
- * Tema oscuro fijo, a propósito: no seguimos prefers-color-scheme.
- * La app se graba en video, y el fondo tiene que verse igual en cualquier
- * máquina y en cualquier toma.
+ * Windows 95 y Age of Empires son de la misma época, y la app usa a cada uno
+ * para lo suyo: el sistema operativo es el marco —escritorio, ventanas, barra
+ * de tareas— y el juego es lo que pasa adentro cuando el ataque arranca, con
+ * unidades de asedio y barras de vida.
+ *
+ * Tema fijo, a propósito: no seguimos prefers-color-scheme. La app se graba en
+ * video y tiene que verse igual en cualquier máquina y en cualquier toma.
  */
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  /* El chrome del sistema, con los valores exactos de la época. Las tres
+   * sombras son lo que da el relieve: sin las tres, un botón parece plano. */
+  --chrome: #c0c0c0;
+  --chrome-lit: #ffffff;
+  --chrome-shadow: #808080;
+  --chrome-edge: #000000;
+
+  /* Barra de título: activa en el degradé azul clásico, inactiva en gris. */
+  --title-from: #000080;
+  --title-to: #1084d0;
+  --title-idle-from: #808080;
+  --title-idle-to: #b5b5b5;
+  --title-text: #ffffff;
+
+  /* El escritorio. El teal de fábrica es plano y se ensucia al comprimir el
+   * video, así que va más oscuro y con dithering encima. */
+  --desktop: #14595a;
+  --desktop-deep: #0e4647;
+
+  /* Estados del asedio, tomados de las barras de vida del juego. */
+  --hp-high: #00a800;
+  --hp-mid: #d8b400;
+  --hp-low: #c00000;
+  --bsod: #0000aa;
+
+  --ink: #000000;
+  --ink-soft: #404040;
+  --field: #ffffff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-chrome: var(--chrome);
+  --color-desktop: var(--desktop);
+  --color-ink: var(--ink);
+  --color-hp-high: var(--hp-high);
+  --color-hp-mid: var(--hp-mid);
+  --color-hp-low: var(--hp-low);
+  --color-bsod: var(--bsod);
+  --font-chrome: var(--font-silkscreen);
+  --font-mono: var(--font-plex-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--desktop);
+  /* Dithering: dos gradientes de puntos desfasados imitan el patrón de medio
+   * tono con el que se rellenaban los fondos cuando no alcanzaban los colores. */
+  background-image:
+    radial-gradient(var(--desktop-deep) 1px, transparent 1px),
+    radial-gradient(var(--desktop-deep) 1px, transparent 1px);
+  background-size: 4px 4px, 4px 4px;
+  background-position: 0 0, 2px 2px;
+  color: var(--ink);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  /* Las fuentes bitmap se ven mal suavizadas: el pixelado es el punto. */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
 }
 
-code,
-kbd,
-samp,
-pre,
-.font-mono {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+/*
+ * El relieve del sistema: un borde exterior claro arriba/izquierda y oscuro
+ * abajo/derecha, más un segundo borde interior invertido. Los cuatro colores
+ * en ese orden son lo que hace que la superficie parezca salir de la pantalla.
+ */
+.raised {
+  border: 2px solid;
+  border-color: var(--chrome-lit) var(--chrome-edge) var(--chrome-edge) var(--chrome-lit);
+  box-shadow:
+    inset 1px 1px 0 var(--chrome),
+    inset -1px -1px 0 var(--chrome-shadow);
+  background: var(--chrome);
+}
+
+/* El mismo relieve al revés: para lo hundido —campos de texto, marcos de
+ * contenido, la bandeja de la barra de tareas—. */
+.sunken {
+  border: 2px solid;
+  border-color: var(--chrome-shadow) var(--chrome-lit) var(--chrome-lit) var(--chrome-shadow);
+  box-shadow:
+    inset 1px 1px 0 var(--chrome-edge),
+    inset -1px -1px 0 var(--chrome);
+}
+
+/* Un botón presionado invierte el relieve y corre el contenido un píxel: es
+ * la respuesta física que hace que un click se sienta. */
+.raised:active:not(:disabled) {
+  border-color: var(--chrome-edge) var(--chrome-lit) var(--chrome-lit) var(--chrome-edge);
+  box-shadow:
+    inset 1px 1px 0 var(--chrome-shadow),
+    inset -1px -1px 0 var(--chrome);
+}
+.btn:active:not(:disabled) > * {
+  transform: translate(1px, 1px);
+}
+
+.btn:focus-visible {
+  outline: 1px dotted var(--ink);
+  outline-offset: -4px;
+}
+
+/*
+ * La ventana aparece con el rectángulo de líneas que se expandía desde el
+ * botón antes de dibujar el contenido. Es el detalle que casi nadie recuerda
+ * de la época y el que separa "gris con bordes" de algo que se siente real.
+ */
+@keyframes zoom-open {
+  0% {
+    transform: scale(0.12) translateY(60px);
+    opacity: 0.9;
+    outline: 1px dotted var(--chrome-lit);
+  }
+  60% {
+    outline: 1px dotted var(--chrome-lit);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    outline: 1px dotted transparent;
+  }
+}
+.window-open {
+  animation: zoom-open 260ms steps(8, end);
+  transform-origin: bottom left;
+}
+
+/* Las barras de progreso de la época avanzaban por bloques, no de corrido. */
+@keyframes seek {
+  from { background-position: 0 0; }
+  to { background-position: 16px 0; }
+}
+.progress-blocks {
+  background-image: linear-gradient(
+    90deg,
+    var(--title-from) 0 12px,
+    transparent 12px 16px
+  );
+  background-size: 16px 100%;
+}
+.progress-seeking {
+  animation: seek 500ms linear infinite;
+}
+
+/* El parpadeo del cursor y del LED del fork: mismo latido para los dos. */
+@keyframes blink {
+  50% { opacity: 0.25; }
+}
+.blink {
+  animation: blink 1.1s steps(1, end) infinite;
+}
+
+/* Un golpe de asedio: la ventana se sacude cuando el ataque encuentra sangre. */
+@keyframes hit {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 1px); }
+  50% { transform: translate(2px, -1px); }
+  75% { transform: translate(-1px, -1px); }
+}
+.hit {
+  animation: hit 180ms steps(2, end) 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window-open,
+  .progress-seeking,
+  .blink,
+  .hit {
+    animation: none;
+  }
 }

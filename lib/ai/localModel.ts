@@ -4,6 +4,7 @@ import { loadModel, unloadModel, QWEN3_4B_INST_Q4_K_M } from '@qvac/sdk'
  * Modelo local. Toda la inferencia corre en la máquina del usuario: no hay API
  * keys ni llamadas a un modelo en la nube.
  */
+/** Si cambia esto, actualizá `MODEL_LABEL` en `modelName.ts`, que es lo que se muestra. */
 export const MODEL_SRC = QWEN3_4B_INST_Q4_K_M
 export const MODEL_NAME = 'Qwen3 4B (Q4_K_M)'
 
