@@ -52,7 +52,14 @@ export interface AttackVector {
   prepare?: () => Promise<void>
 }
 
-export type VectorId = 'price' | 'depeg' | 'oracle' | 'time' | 'governance' | 'liquidity'
+export type VectorId =
+  | 'price'
+  | 'depeg'
+  | 'oracle'
+  | 'time'
+  | 'governance'
+  | 'liquidity'
+  | 'cascade'
 
 /**
  * Movimiento adverso del activo volátil.
@@ -108,24 +115,23 @@ function priceCrash(strategy: Strategy): AttackVector {
  * en dólares, que es lo contrario de lo que sugiere la palabra "depeg".
  */
 function stablecoinDepeg(strategy: Strategy): AttackVector | null {
-  const isCollateral = strategy.collateral.asset === 'USDC'
-  const isDebt = strategy.debt.asset === 'USDC'
-  if (!isCollateral && !isDebt) return null
+  // Sólo cuando la stablecoin es el colateral. Si es la deuda, el escenario que
+  // lastima es que USDC se aprecie, y una stablecoin apreciándose un 12% no es
+  // un riesgo que alguien esté evaluando: mostrarlo gasta la atención del
+  // usuario en algo que no va a pasar.
+  if (strategy.collateral.asset !== 'USDC') return null
 
-  const downward = isCollateral
   return {
     id: 'depeg',
     label: 'Depeg de USDC',
-    premise: downward
-      ? 'USDC pierde el peg y tu colateral se evapora, como en marzo de 2023.'
-      : 'USDC se aprecia y tu deuda crece medida en dólares.',
+    premise: 'USDC pierde el peg y tu colateral se evapora, como en marzo de 2023.',
     mutate: (usd) => [{ type: 'priceSet', asset: 'USDC', usd }],
-    bounds: downward ? { safe: 1, extreme: 0.5 } : { safe: 1, extreme: 2 },
+    bounds: { safe: 1, extreme: 0.5 },
     scale: 'absolute',
     format: (usd) => `USDC a $${usd.toFixed(3)}`,
-    briefing: downward
-      ? 'You are looking for the smallest USDC price drop below its $1 peg that makes the position liquidatable. The collateral is USDC, so a cheaper USDC means less collateral value.'
-      : 'You are looking for the smallest USDC price increase above its $1 peg that makes the position liquidatable. The debt is USDC, so a more expensive USDC means a larger debt.',
+    briefing:
+      'You are looking for the smallest USDC price drop below its $1 peg that makes the position ' +
+      'liquidatable. The collateral is USDC, so a cheaper USDC means less collateral value.',
     paramName: 'usdc_price',
     paramDescription: 'USDC price in USD. 1.0 is the peg. 0.9 means USDC trades 10% below peg.',
     targetAsset: 'USDC',
@@ -269,9 +275,48 @@ function liquidityCrisis(strategy: Strategy): AttackVector {
   }
 }
 
+/**
+ * Una cascada de liquidaciones.
+ *
+ * Cuando liquidan una posición grande, el liquidador no se queda el colateral:
+ * lo vende. Esa venta empuja el precio hacia abajo, y ese empujón puede volver
+ * liquidable a la posición siguiente, que a su vez se vende. Así se propagan los
+ * eventos de liquidación en cadena.
+ *
+ * El impacto de precio no se estima con una curva inventada: se cotiza contra
+ * los pools reales de Uniswap V3 en el fork. La profundidad del mercado es un
+ * dato, y en ese dato está la respuesta — el mercado absorbe mil WETH moviendo
+ * el precio poco más de un punto, y no absorbe diez mil a ningún precio.
+ *
+ * Sólo aplica cuando el colateral es volátil: nadie hunde el precio de una
+ * stablecoin vendiéndola en Uniswap.
+ */
+function liquidationCascade(strategy: Strategy): AttackVector | null {
+  if (strategy.collateral.asset !== 'WETH') return null
+
+  return {
+    id: 'cascade',
+    label: 'Una cascada de liquidaciones',
+    premise: 'Liquidan a otro, su colateral se vende al mercado y el precio te arrastra a vos.',
+    mutate: (amount) => [{ type: 'marketSale', asset: 'WETH', amount }],
+    bounds: { safe: 0, extreme: 5000 },
+    scale: 'percent',
+    format: (amount) => `liquidan ${Math.round(amount)} WETH`,
+    formatForModel: (amount) => `${Math.round(amount)} WETH`,
+    briefing:
+      'You are looking for the smallest liquidation, measured in WETH sold into the market, that ' +
+      'pushes the price down enough to make this position liquidatable too. The sale is quoted ' +
+      'against real Uniswap V3 pools.',
+    paramName: 'weth_liquidated',
+    paramDescription: 'How much WETH gets liquidated and sold into the market, in whole WETH.',
+    targetAsset: 'WETH',
+  }
+}
+
 /** Los vectores que tienen sentido para una estrategia dada. */
 export function vectorsFor(strategy: Strategy): AttackVector[] {
   const depeg = stablecoinDepeg(strategy)
+  const cascade = liquidationCascade(strategy)
   return [
     priceCrash(strategy),
     ...(depeg ? [depeg] : []),
@@ -279,6 +324,7 @@ export function vectorsFor(strategy: Strategy): AttackVector[] {
     timeDecay(),
     governanceRiskChange(strategy),
     liquidityCrisis(strategy),
+    ...(cascade ? [cascade] : []),
   ]
 }
 

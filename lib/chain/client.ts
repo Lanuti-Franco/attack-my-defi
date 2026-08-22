@@ -6,7 +6,12 @@ import { ANVIL_ACCOUNT } from './addresses'
 /** Anvil persistente, forkeado de mainnet con bloque pineado. */
 export const FORK_URL = process.env.FORK_RPC_URL ?? 'http://127.0.0.1:8545'
 
-const transport = http(FORK_URL)
+/**
+ * El timeout por defecto de viem (10s) alcanza para llamadas normales pero no
+ * para `anvil_reset`, que vuelve a traer el estado del fork desde el RPC remoto
+ * y puede tardar bastante más cuando el fork acumuló estado.
+ */
+const transport = http(FORK_URL, { timeout: 180_000 })
 
 export const publicClient = createPublicClient({ chain: mainnet, transport })
 

@@ -5,6 +5,7 @@ import { installMockFeed, setAssetPrice } from './oracle'
 import { testClient } from '../chain/client'
 import { lowerLiquidationThreshold } from './riskParams'
 import { drainLiquidity } from './liquidityDrain'
+import { measureMarketImpact } from './marketImpact'
 
 /**
  * Una mutación es un cambio de estado del mundo que aplicamos al fork antes de
@@ -22,6 +23,8 @@ export type Mutation =
   | { type: 'lowerThreshold'; asset: AssetSymbol; points: number }
   /** Una ballena consume liquidez del pool y dispara la tasa variable */
   | { type: 'drainLiquidity'; asset: AssetSymbol; pct: number; alreadyFunded?: boolean }
+  /** Alguien liquida y vende ese colateral al mercado, hundiendo el precio */
+  | { type: 'marketSale'; asset: AssetSymbol; amount: number }
 
 export function assetAddress(asset: AssetSymbol): Address {
   return asset === 'WETH' ? ADDRESSES.weth : ADDRESSES.usdc
@@ -40,6 +43,8 @@ export function describeMutation(m: Mutation): string {
       return `LT de ${m.asset} −${m.points.toFixed(1)} pts`
     case 'drainLiquidity':
       return `se va el ${m.pct.toFixed(0)}% de la liquidez`
+    case 'marketSale':
+      return `liquidan ${Math.round(m.amount)} ${m.asset}`
   }
 }
 
@@ -65,6 +70,17 @@ export async function applyMutation(m: Mutation): Promise<void> {
   // ella la tasa variable a la que crece la deuda.
   if (m.type === 'drainLiquidity') {
     await drainLiquidity(m.asset, m.pct, { alreadyFunded: m.alreadyFunded })
+    return
+  }
+
+  // Una liquidación ajena termina en una venta, y esa venta mueve el precio. El
+  // impacto se cotiza contra los pools reales de Uniswap y después se aplica al
+  // oráculo: el mercado se movió de verdad, así que el feed lo va a reflejar.
+  if (m.type === 'marketSale') {
+    const impact = await measureMarketImpact(m.asset, m.amount)
+    const addr = assetAddress(m.asset)
+    await installMockFeed(addr)
+    await setAssetPrice(addr, basePriceOf(addr) * (1 - impact.slippage))
     return
   }
 

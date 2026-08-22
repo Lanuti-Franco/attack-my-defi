@@ -6,7 +6,7 @@ import { vectorById } from '@/lib/ai/vectors'
 const requestSchema = z.object({
   strategy: strategySchema,
   vector: z
-    .enum(['price', 'depeg', 'oracle', 'time', 'governance', 'liquidity'])
+    .enum(['price', 'depeg', 'oracle', 'time', 'governance', 'liquidity', 'cascade'])
     .default('price'),
 })
 
