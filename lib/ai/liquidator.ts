@@ -10,6 +10,7 @@ import { vectorsFor, type AttackVector } from "./vectors";
 import { computeAttackerProfit } from "../simulation/liquidationProfit";
 import { readAssetPrice, type PositionState } from "../chain/aave";
 import { ASSETS } from "../chain/addresses";
+import { safeMessage } from "../chain/redact";
 
 /** Cuántas simulaciones puede pedir el atacante antes de que lo cortemos. */
 const MAX_STEPS = 8;
@@ -26,10 +27,40 @@ export interface Probe {
   healthFactor: number;
   liquidated: boolean;
   collateralUsd: number;
+  /** Con qué se justificó el modelo al elegir este escenario. Puede venir vacío. */
+  rationale: string;
+}
+
+/**
+ * Cómo se portó el modelo durante una búsqueda.
+ *
+ * Un 4B local haciendo tool use confiable es parte del desafío, y "confiable"
+ * sin números es una opinión. Esto cuenta cada vez que el código tuvo que
+ * suplirlo, que es lo que hay que mirar para saber si el sistema se sostiene
+ * por el modelo o a pesar de él.
+ */
+export interface ModelStats {
+  /** Veces que se le pidió el próximo escenario. */
+  calls: number
+  /** Veces que contestó en prosa en vez de llamar a la herramienta. */
+  refusals: number
+  /** Veces que propuso un valor fuera de rango y hubo que acotarlo. */
+  corrections: number
+  /** Veces que propuso un escenario ya probado. */
+  repeats: number
 }
 
 /** Lo que deja una búsqueda completa sobre un vector. */
 export interface ThresholdOutcome {
+  modelStats: ModelStats;
+  /**
+   * Por qué la búsqueda se cortó antes de tiempo, si se cortó.
+   *
+   * Distinguirlo de "no encontró umbral" no es un detalle: sin esto, una
+   * simulación que falla por un problema de red termina reportándose como que
+   * la posición aguantó todo. Una mala noticia silenciada es peor que un error.
+   */
+  failure?: string;
   probes: Probe[];
   threshold: number | null;
   thresholdLabel: string | null;
@@ -105,7 +136,8 @@ async function chooseNextProbe(
   modelId: string,
   probes: Probe[],
   vector: AttackVector,
-): Promise<{ intensity: number; rationale: string } | null> {
+  seed?: number,
+): Promise<{ intensity: number; rationale: string; corrected: boolean } | null> {
   const { mildestKill, harshestSurvival } = bracketOf(probes, vector);
 
   // Al modelo se le habla en las unidades del parámetro que completa, no en las
@@ -149,7 +181,7 @@ async function chooseNextProbe(
   const run = completion({
     modelId,
     stream: false,
-    generationParams: GENERATION_PARAMS,
+    generationParams: seed === undefined ? GENERATION_PARAMS : { ...GENERATION_PARAMS, seed },
     history: [
       {
         role: "system",
@@ -195,6 +227,10 @@ finds the answer far faster than sweeping in fixed increments.`,
   return {
     intensity,
     rationale: (final as { content?: string }).content?.trim() ?? "",
+    // Que haya hecho falta corregir el valor no invalida la corrida, pero es
+    // exactamente el tipo de cosa que hay que poder contar: es la diferencia
+    // entre "el modelo usa bien las herramientas" y "el código lo sostiene".
+    corrected: raw !== intensity,
   };
 }
 
@@ -222,10 +258,18 @@ export async function* searchThreshold(opts: {
   modelId: string;
   base: PositionState;
   strategy: Strategy;
+  /**
+   * Semilla del modelo. Por defecto se usa la fija, que hace la demo
+   * reproducible; el harness de evidencia la varía para poder comprobar que el
+   * resultado converge igual y no depende de una semilla afortunada.
+   */
+  seed?: number;
 }): AsyncGenerator<Probe, ThresholdOutcome> {
-  const { engine, vector, modelId, base, strategy } = opts;
+  const { engine, vector, modelId, base, strategy, seed } = opts;
   const probes: Probe[] = [];
   let refusals = 0;
+  const stats: ModelStats = { calls: 0, refusals: 0, corrections: 0, repeats: 0 };
+  let failure: string | undefined;
 
   // Preparación cara del vector, si la tiene: se hace una vez y queda fija como
   // punto de partida de todos sus escenarios. El finally la descarta para que el
@@ -234,12 +278,15 @@ export async function* searchThreshold(opts: {
 
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
-      const choice = await chooseNextProbe(modelId, probes, vector);
+      stats.calls++;
+      const choice = await chooseNextProbe(modelId, probes, vector, seed);
 
       if (!choice) {
+        stats.refusals++;
         if (++refusals >= 2) break;
         continue;
       }
+      if (choice.corrected) stats.corrections++;
 
       const alreadyTested = probes.some(
         (p) =>
@@ -247,12 +294,16 @@ export async function* searchThreshold(opts: {
             severity(p.intensity, vector) - severity(choice.intensity, vector),
           ) < 0.001,
       );
-      if (alreadyTested) continue;
+      if (alreadyTested) {
+        stats.repeats++;
+        continue;
+      }
 
       let result: ScenarioResult;
       try {
         result = await engine.run(vector.mutate(choice.intensity));
-      } catch {
+      } catch (err) {
+        failure = safeMessage(err);
         break;
       }
 
@@ -261,6 +312,7 @@ export async function* searchThreshold(opts: {
         healthFactor: result.state.healthFactor,
         liquidated: result.verdict === "LIQUIDATABLE",
         collateralUsd: result.state.collateralUsd,
+        rationale: choice.rationale,
       };
       probes.push(probe);
       yield probe;
@@ -286,6 +338,8 @@ export async function* searchThreshold(opts: {
   if (!mildestKill) {
     return {
       probes,
+      modelStats: stats,
+      failure,
       threshold: null,
       thresholdLabel: null,
       summary: vector.survivedMessage,
@@ -321,6 +375,8 @@ export async function* searchThreshold(opts: {
 
   return {
     probes,
+    modelStats: stats,
+    failure,
     threshold: mildestKill.intensity,
     thresholdLabel: vector.format(mildestKill.intensity),
     attackerProfitUsd,

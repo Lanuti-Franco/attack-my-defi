@@ -4,6 +4,7 @@
  */
 import { ScenarioEngine } from '../lib/simulation/scenarioEngine'
 import { vectorsFor } from '../lib/ai/vectors'
+import { releaseForkLock } from '../lib/simulation/forkLock'
 
 const SPEC = {
   collateral: { asset: 'WBTC' as const, amount: 5 },
@@ -55,7 +56,9 @@ async function main() {
   console.log('\nWBTC funciona.')
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message.slice(0, 400) : err)
-  process.exit(1)
-})
+main()
+  .catch((err) => {
+    console.error(err instanceof Error ? err.message.slice(0, 400) : err)
+    process.exitCode = 1
+  })
+  .finally(releaseForkLock)

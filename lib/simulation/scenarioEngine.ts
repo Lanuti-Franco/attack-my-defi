@@ -11,6 +11,7 @@ import {
 } from './mutations'
 import { forgetInstalledFeeds } from './oracle'
 import { resetFork } from '../chain/reset'
+import { acquireForkLock, releaseForkLock } from './forkLock'
 
 export type Verdict = 'SURVIVED' | 'LIQUIDATABLE'
 
@@ -40,6 +41,7 @@ export class ScenarioEngine {
 
   async setup(spec: StrategySpec): Promise<PositionState> {
     await assertForkAlive()
+    acquireForkLock(`${spec.collateral.amount} ${spec.collateral.asset} / ${spec.debt.amount} ${spec.debt.asset}`)
     this.spec = spec
 
     // Volver el fork al bloque pineado antes de construir nada. Sin esto, dos

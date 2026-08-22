@@ -1,4 +1,5 @@
 import { ScenarioEngine } from '../simulation/scenarioEngine'
+import { releaseForkLock } from '../simulation/forkLock'
 import { vectorsFor, type AttackVector } from './vectors'
 import { ensureModel } from './localModel'
 import { severity, searchThreshold } from './liquidator'
@@ -18,6 +19,21 @@ export async function* runAudit(opts: {
   modelId?: string
 }): AsyncGenerator<AuditEvent> {
   const engine = new ScenarioEngine()
+
+  try {
+    yield* audit(engine, opts)
+  } finally {
+    // Si esto no corre, el próximo intento se choca con un lock que ya no
+    // guarda nada. Va en finally porque el generador puede abandonarse a mitad
+    // —una pestaña que se cierra corta el stream— y ahí no hay retorno normal.
+    releaseForkLock()
+  }
+}
+
+async function* audit(
+  engine: ScenarioEngine,
+  opts: { strategy: Strategy; modelId?: string },
+): AsyncGenerator<AuditEvent> {
   const base = await engine.setup(opts.strategy)
 
   yield {
@@ -58,6 +74,7 @@ export async function* runAudit(opts: {
         healthFactor: probe.healthFactor,
         verdict: probe.liquidated ? 'LIQUIDATABLE' : 'SURVIVED',
         collateralUsd: probe.collateralUsd,
+        rationale: probe.rationale,
       }
       step = await search.next()
     }

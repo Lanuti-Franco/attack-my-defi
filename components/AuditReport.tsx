@@ -4,6 +4,7 @@ import type { AuditEvent, RecommendationView } from '@/lib/schemas/strategy'
 import { Window, ProgressBar } from '@/components/win95/Window'
 import { HealthBar } from '@/components/win95/HealthBar'
 import { Verdict, breachesFrom } from '@/components/Verdict'
+import { AgentLoop } from '@/components/AgentLoop'
 
 const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))
@@ -164,22 +165,9 @@ function VectorWindow({ run, index }: { run: VectorRun; index: number }) {
           {!run.done && <ProgressBar value={null} />}
 
           {run.attempts.length > 0 && (
-            <ol className="sunken font-mono mt-3 max-h-44 overflow-y-auto bg-(--field) p-2 text-[12px]">
-              {run.attempts.map((a, i) => (
-                <li key={i} className="flex items-baseline gap-2 py-[2px]">
-                  <span aria-hidden className="w-3 shrink-0">
-                    {a.verdict === 'LIQUIDATABLE' ? '☠' : '·'}
-                  </span>
-                  <span className="flex-1 truncate">{a.label}</span>
-                  <span className="tabular-nums">HF {hf(a.healthFactor)}</span>
-                </li>
-              ))}
-              {!run.done && (
-                <li aria-hidden className="blink py-[2px] pl-5">
-                  █
-                </li>
-              )}
-            </ol>
+            <div className="mt-3">
+              <AgentLoop attempts={run.attempts} waiting={!run.done} />
+            </div>
           )}
 
           {!run.done && !run.attempts.length && (

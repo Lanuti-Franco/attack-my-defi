@@ -73,6 +73,12 @@ export type AuditEvent =
       healthFactor: number
       verdict: 'SURVIVED' | 'LIQUIDATABLE'
       collateralUsd: number
+      /**
+       * Por qué el modelo eligió este escenario. Es la mitad del bucle que de
+       * otro modo no se ve: sin esto la auditoría parece una lista de pruebas
+       * predeterminadas en vez de una búsqueda.
+       */
+      rationale: string
     }
   | {
       type: 'vectorDone'

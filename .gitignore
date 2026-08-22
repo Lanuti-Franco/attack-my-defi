@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Snapshot del fork limpio: es local y depende del Anvil que esté corriendo
 .anvil-pristine
+.anvil-lock

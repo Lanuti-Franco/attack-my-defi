@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "warm": "tsx --env-file=.env.local scripts/warm-fork.ts"
+    "warm": "tsx --env-file=.env.local scripts/warm-fork.ts",
+    "evidence": "tsx --env-file=.env.local scripts/evidence.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.116.0",
