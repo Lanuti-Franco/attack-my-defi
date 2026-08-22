@@ -35,6 +35,8 @@ export class ScenarioEngine {
   private baseSnapshot: `0x${string}` | null = null
   private user: Address | null = null
   private spec: StrategySpec | null = null
+  /** Snapshot del mundo limpio, mientras haya una preparación activa. */
+  private pristineSnapshot: `0x${string}` | null = null
 
   async setup(spec: StrategySpec): Promise<PositionState> {
     await assertForkAlive()
@@ -58,6 +60,38 @@ export class ScenarioEngine {
 
     this.baseSnapshot = await testClient.snapshot()
     return readPosition(this.user)
+  }
+
+  /**
+   * Aplica una preparación cara una sola vez y la deja fija como punto de
+   * partida de los escenarios siguientes.
+   *
+   * Sirve para el trabajo que un vector necesita repetir en cada escenario pero
+   * que no cambia entre ellos —por ejemplo dejar a una ballena con colateral
+   * depositado antes de que pida préstamos de distinto tamaño—. Sin esto, cada
+   * escenario lo rehace desde cero y paga el costo completo.
+   *
+   * Va contra un snapshot propio, no contra el base: así lo que la preparación
+   * le hace al mundo no se filtra a los demás vectores. Depositar colateral,
+   * sin ir más lejos, mueve las tasas del pool, y otro vector que dependiera de
+   * esas tasas mediría un mundo distinto del que el usuario tiene.
+   */
+  async prepare(setup: () => Promise<void>): Promise<void> {
+    this.assertReady()
+    if (this.pristineSnapshot) {
+      throw new Error('Ya hay una preparación activa: llamá releasePrepared() antes.')
+    }
+    this.pristineSnapshot = this.baseSnapshot
+    await setup()
+    this.baseSnapshot = await testClient.snapshot()
+  }
+
+  /** Descarta la preparación y vuelve al mundo limpio. */
+  async releasePrepared(): Promise<void> {
+    if (!this.pristineSnapshot) return
+    this.baseSnapshot = this.pristineSnapshot
+    this.pristineSnapshot = null
+    await this.revertToBase()
   }
 
   /** Estado de la posición sin ninguna mutación aplicada. */

@@ -1,6 +1,7 @@
 import type { Mutation } from '../simulation/mutations'
 import type { Strategy } from '../schemas/strategy'
 import type { AssetSymbol } from '../chain/addresses'
+import { fundWhale } from '../simulation/liquidityDrain'
 
 /**
  * Un vector de ataque es una forma de romper la posición.
@@ -44,6 +45,11 @@ export interface AttackVector {
   targetAsset?: AssetSymbol
   /** Marca los vectores donde el precio de mercado no acompaña al del oráculo. */
   isOracleManipulation?: boolean
+  /**
+   * Trabajo caro que hace falta una vez por vector y no cambia entre escenarios.
+   * Corre contra un snapshot propio, así no contamina a los demás vectores.
+   */
+  prepare?: () => Promise<void>
 }
 
 export type VectorId = 'price' | 'depeg' | 'oracle' | 'time' | 'governance' | 'liquidity'
@@ -240,8 +246,12 @@ function liquidityCrisis(strategy: Strategy): AttackVector {
     id: 'liquidity',
     label: 'Una corrida de liquidez',
     premise: `El pool de ${asset} se vacía, la tasa se dispara y tu deuda crece mucho más rápido.`,
+    // La ballena queda con el colateral ya depositado antes del primer escenario:
+    // envolver y depositar 400.000 WETH es la parte cara y no cambia entre
+    // escenarios, sólo cambia cuánto pide prestado.
+    prepare: fundWhale,
     mutate: (pct) => [
-      { type: 'drainLiquidity', asset, pct },
+      { type: 'drainLiquidity', asset, pct, alreadyFunded: true },
       { type: 'advanceTime', days: LIQUIDITY_HORIZON_DAYS },
     ],
     bounds: { safe: 0, extreme: 99 },

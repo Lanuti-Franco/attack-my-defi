@@ -21,7 +21,7 @@ export type Mutation =
   /** Governance le baja el umbral de liquidación al colateral, en puntos */
   | { type: 'lowerThreshold'; asset: AssetSymbol; points: number }
   /** Una ballena consume liquidez del pool y dispara la tasa variable */
-  | { type: 'drainLiquidity'; asset: AssetSymbol; pct: number }
+  | { type: 'drainLiquidity'; asset: AssetSymbol; pct: number; alreadyFunded?: boolean }
 
 export function assetAddress(asset: AssetSymbol): Address {
   return asset === 'WETH' ? ADDRESSES.weth : ADDRESSES.usdc
@@ -64,7 +64,7 @@ export async function applyMutation(m: Mutation): Promise<void> {
   // Consumir liquidez tampoco toca precios: sube la utilización del pool, y con
   // ella la tasa variable a la que crece la deuda.
   if (m.type === 'drainLiquidity') {
-    await drainLiquidity(m.asset, m.pct)
+    await drainLiquidity(m.asset, m.pct, { alreadyFunded: m.alreadyFunded })
     return
   }
 

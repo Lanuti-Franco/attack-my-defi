@@ -28,9 +28,31 @@ const WHALE = privateKeyToAccount(
  * La ballena se fondea con `anvil_setBalance`, deposita WETH y pide prestado el
  * porcentaje pedido de la liquidez disponible.
  */
+/**
+ * Deja a la ballena con colateral depositado, lista para pedir prestado.
+ *
+ * Separado del préstamo a propósito: depositar colateral es la parte cara
+ * (envolver y depositar cientos de miles de WETH) y la que se puede reutilizar
+ * entre escenarios, mientras que el préstamo es lo que define cada escenario.
+ */
+export async function fundWhale(): Promise<void> {
+  await testClient.setBalance({ address: WHALE.address, value: parseUnits('2000000', 18) })
+
+  const collateralWeth = parseUnits('400000', 18)
+  await whaleSend(ADDRESSES.weth, wethAbi, 'deposit', [], collateralWeth)
+  await whaleSend(ADDRESSES.weth, erc20Abi, 'approve', [ADDRESSES.pool, collateralWeth])
+  await whaleSend(ADDRESSES.pool, poolAbi, 'supply', [
+    ADDRESSES.weth,
+    collateralWeth,
+    WHALE.address,
+    0,
+  ])
+}
+
 export async function drainLiquidity(
   asset: AssetSymbol,
   pctOfAvailable: number,
+  opts: { alreadyFunded?: boolean } = {},
 ): Promise<{ drainedUsd: number; remainingUsd: number }> {
   const target = ASSETS[asset]
 
@@ -49,20 +71,8 @@ export async function drainLiquidity(
     }
   }
 
-  // Colateral de sobra para lo que va a pedir: el precio no importa mientras
-  // alcance, y sobre-colateralizar evita que la ballena sea liquidable y
-  // ensucie el escenario.
-  await testClient.setBalance({ address: WHALE.address, value: parseUnits('2000000', 18) })
+  if (!opts.alreadyFunded) await fundWhale()
 
-  const collateralWeth = parseUnits('400000', 18)
-  await whaleSend(ADDRESSES.weth, wethAbi, 'deposit', [], collateralWeth)
-  await whaleSend(ADDRESSES.weth, erc20Abi, 'approve', [ADDRESSES.pool, collateralWeth])
-  await whaleSend(ADDRESSES.pool, poolAbi, 'supply', [
-    ADDRESSES.weth,
-    collateralWeth,
-    WHALE.address,
-    0,
-  ])
   await whaleSend(ADDRESSES.pool, poolAbi, 'borrow', [
     target.address,
     toBorrow,
