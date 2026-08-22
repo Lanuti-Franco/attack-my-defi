@@ -1,0 +1,114 @@
+import { parseAbi, formatUnits, type Address } from 'viem'
+import { publicClient } from './client'
+import { ADDRESSES, DECIMALS } from './addresses'
+
+export const poolAbi = parseAbi([
+  'function getUserAccountData(address user) view returns (uint256 totalCollateralBase, uint256 totalDebtBase, uint256 availableBorrowsBase, uint256 currentLiquidationThreshold, uint256 ltv, uint256 healthFactor)',
+  'function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)',
+  'function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf)',
+])
+
+export const oracleAbi = parseAbi([
+  'function getAssetPrice(address asset) view returns (uint256)',
+  'function getSourceOfAsset(address asset) view returns (address)',
+  'function setAssetSources(address[] assets, address[] sources)',
+  'function BASE_CURRENCY_UNIT() view returns (uint256)',
+])
+
+export const erc20Abi = parseAbi([
+  'function balanceOf(address) view returns (uint256)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function decimals() view returns (uint8)',
+])
+
+export const wethAbi = parseAbi(['function deposit() payable'])
+
+/**
+ * Estado de una posición tal como lo reporta Aave.
+ * Los campos `*Usd` y `healthFactor` son conversiones de presentación;
+ * los `*Raw` son los enteros exactos que devolvió el contrato.
+ */
+export interface PositionState {
+  collateralUsd: number
+  debtUsd: number
+  availableBorrowsUsd: number
+  /** Liquidation threshold en fracción (0.83), convertido desde bps */
+  liquidationThreshold: number
+  ltv: number
+  /** Infinity cuando no hay deuda (Aave devuelve max uint256) */
+  healthFactor: number
+  raw: {
+    totalCollateralBase: bigint
+    totalDebtBase: bigint
+    availableBorrowsBase: bigint
+    currentLiquidationThreshold: bigint
+    ltv: bigint
+    healthFactor: bigint
+  }
+}
+
+const MAX_UINT256 = (1n << 256n) - 1n
+
+/** Lee el estado de la posición directamente de Aave. Ningún número se calcula acá. */
+export async function readPosition(user: Address): Promise<PositionState> {
+  const r = await publicClient.readContract({
+    address: ADDRESSES.pool,
+    abi: poolAbi,
+    functionName: 'getUserAccountData',
+    args: [user],
+  })
+
+  const [
+    totalCollateralBase,
+    totalDebtBase,
+    availableBorrowsBase,
+    currentLiquidationThreshold,
+    ltv,
+    healthFactor,
+  ] = r
+
+  return {
+    collateralUsd: Number(formatUnits(totalCollateralBase, DECIMALS.base)),
+    debtUsd: Number(formatUnits(totalDebtBase, DECIMALS.base)),
+    availableBorrowsUsd: Number(formatUnits(availableBorrowsBase, DECIMALS.base)),
+    liquidationThreshold: Number(currentLiquidationThreshold) / 10_000,
+    ltv: Number(ltv) / 10_000,
+    healthFactor:
+      healthFactor === MAX_UINT256
+        ? Infinity
+        : Number(formatUnits(healthFactor, DECIMALS.healthFactor)),
+    raw: {
+      totalCollateralBase,
+      totalDebtBase,
+      availableBorrowsBase,
+      currentLiquidationThreshold,
+      ltv,
+      healthFactor,
+    },
+  }
+}
+
+/** Precio de un activo según el oráculo de Aave, en USD (8 decimales). */
+export async function readAssetPrice(asset: Address): Promise<number> {
+  const p = await publicClient.readContract({
+    address: ADDRESSES.oracle,
+    abi: oracleAbi,
+    functionName: 'getAssetPrice',
+    args: [asset],
+  })
+  return Number(formatUnits(p, DECIMALS.base))
+}
+
+/** Custom errors de Aave, para no mostrar un hex crudo cuando algo revierte. */
+export const AAVE_ERRORS: Record<string, string> = {
+  '0x911ceb81': 'CollateralCannotCoverNewBorrow: el colateral no alcanza para ese préstamo',
+  '0x4b6b0ea3': 'HealthFactorLowerThanLiquidationThreshold',
+}
+
+export function explainRevert(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  for (const [sig, human] of Object.entries(AAVE_ERRORS)) {
+    if (msg.includes(sig)) return human
+  }
+  return msg
+}
