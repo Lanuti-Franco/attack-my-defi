@@ -19,6 +19,11 @@ out of 5 attacks tried
 Verified against Aave V3 on an Ethereum mainnet fork · block 25811399
 ```
 
+![The audit running: the combined attack in progress, one attack already broken through, and the queue of the rest](docs/02-attacking.jpg)
+
+*The combined attack searching, with the ETH crash already broken through on the left and the
+queue of attacks on the right.*
+
 ## The problem this solves
 
 A language model can write "your health factor would be 0.95" with complete confidence and be
@@ -34,6 +39,8 @@ factors is the contract.
 | The numbers | The Aave contract | A model can hallucinate; a contract cannot |
 | The search mechanics | The code | Deterministic and boring |
 | Which scenario to try | The local model | Takes judgement, and it is the interesting part |
+
+![The verdict: two ways to break the position, the cheapest one, and what to do about it](docs/03-verdict.jpg)
 
 ## How it works
 
