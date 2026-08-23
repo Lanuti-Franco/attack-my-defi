@@ -1,5 +1,6 @@
 import type { Mutation } from './mutations'
 import type { Strategy } from '../schemas/strategy'
+import { ASSETS, type AssetSymbol } from '../chain/addresses'
 
 /**
  * Perfiles de aversión al riesgo, anclados en cosas que efectivamente pasaron.
@@ -11,8 +12,12 @@ import type { Strategy } from '../schemas/strategy'
 export interface RiskProfile {
   id: 'degen' | 'moderado' | 'conservador'
   label: string
-  /** El evento contra el que se mide, con su fecha. */
-  benchmark: string
+  /**
+   * El evento contra el que se mide. Recibe el colateral porque el escenario se
+   * aplica a lo que la posición tenga: decir "ETH −20%" cuando el colateral es
+   * BTC nombra un activo que no participa.
+   */
+  benchmark(collateral: AssetSymbol): string
   /** Qué le pasa al mundo en ese escenario. */
   scenario(strategy: Strategy): Mutation[]
   /** Caída del colateral que implica el escenario, para el cálculo analítico. */
@@ -22,28 +27,43 @@ export interface RiskProfile {
 /**
  * Los tres eventos están elegidos por severidad creciente y son verificables:
  * el 12 de marzo de 2020 ETH perdió cerca de la mitad de su valor en un día, el
- * 19 de mayo de 2021 cayó alrededor de un tercio en la jornada, y una caída del
- * 20% es simplemente un mal día de mercado en cripto.
+ * 19 de mayo de 2021 cayó alrededor de un tercio, y una caída del 20% es
+ * simplemente un mal día en cripto. Las fechas son de ETH, pero la magnitud
+ * sirve igual como vara para cualquier colateral volátil.
  */
+/**
+ * Cómo se nombra cada escenario según el colateral.
+ *
+ * Las fechas son de ETH y sólo se citan para colateral volátil: un USDC
+ * cayendo un tercio no es "un crash como el de mayo de 2021", es un depeg que
+ * nunca ocurrió. La magnitud sigue sirviendo como vara; la comparación
+ * histórica, no.
+ */
+function describe(asset: AssetSymbol, drop: number, event: string, when?: string): string {
+  const { label, stable } = ASSETS[asset]
+  if (stable) return `a ${drop}% depeg of ${label}`
+  return when ? `${event} (${label} −${drop}%, like ${when})` : `${event} (${label} −${drop}%)`
+}
+
 export const RISK_PROFILES: RiskProfile[] = [
   {
     id: 'degen',
     label: 'Degen',
-    benchmark: 'a bad day (ETH −20%)',
+    benchmark: (asset) => describe(asset, 20, 'a bad day'),
     scenario: (s) => [{ type: 'priceShock', asset: s.collateral.asset, pct: -20 }],
     collateralDrop: 0.2,
   },
   {
     id: 'moderado',
     label: 'Moderate',
-    benchmark: 'a crash (ETH −35%, like 19 May 2021)',
+    benchmark: (asset) => describe(asset, 35, 'a crash', '19 May 2021'),
     scenario: (s) => [{ type: 'priceShock', asset: s.collateral.asset, pct: -35 }],
     collateralDrop: 0.35,
   },
   {
     id: 'conservador',
     label: 'Conservative',
-    benchmark: 'a collapse (ETH −50%, like Black Thursday 2020)',
+    benchmark: (asset) => describe(asset, 50, 'a collapse', 'Black Thursday 2020'),
     scenario: (s) => [{ type: 'priceShock', asset: s.collateral.asset, pct: -50 }],
     collateralDrop: 0.5,
   },

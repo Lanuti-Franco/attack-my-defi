@@ -5,9 +5,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 type WindowTone = 'normal' | 'dead'
 
 /**
- * Una ventana del sistema. El botón de minimizar funciona; los otros dos son
- * decorativos —sacarlos deja algo que ya no se lee como una ventana— y van
- * marcados como tales para que un lector de pantalla no los ofrezca.
+ * Una ventana del sistema, con los controles funcionando: minimizar pliega a la
+ * barra de título, cerrar la saca de la pantalla, y la barra misma pliega y
+ * despliega al hacerle click, como hacía el original.
+ *
+ * Maximizar queda decorativo: acá las ventanas ya ocupan el ancho que les toca.
  */
 export function Window({
   title,
@@ -35,6 +37,7 @@ export function Window({
   children: ReactNode
 }) {
   const [collapsed, setCollapsed] = useState(startCollapsed)
+  const [closed, setClosed] = useState(false)
 
   // Sólo en el flanco: si se plegara en cada render, no habría forma de volver
   // a abrirla mientras la condición siga dándose.
@@ -44,12 +47,17 @@ export function Window({
     wasAsked.current = collapseWhen
   }, [collapseWhen])
 
+  if (closed) return null
+
   return (
     <section
       className={`raised flex flex-col p-1 ${opening ? 'window-open' : ''} ${collapsed ? '' : className}`}
     >
+      {/* La barra entera pliega y despliega: es el gesto que uno espera de una
+          ventana, y deja el botón para quien lo busca. */}
       <header
-        className="flex items-center gap-2 px-1 py-[3px]"
+        onClick={() => setCollapsed((was) => !was)}
+        className="flex cursor-pointer items-center gap-2 px-1 py-[3px]"
         style={{ background: 'linear-gradient(90deg, var(--title-from), var(--title-to))' }}
       >
         {icon && (
@@ -60,20 +68,16 @@ export function Window({
         <h2 className="font-chrome truncate text-[11px] leading-none text-(--title-text)">
           {title}
         </h2>
-        <div className="ml-auto flex gap-[2px]">
-          <button
-            type="button"
+        <div className="ml-auto flex gap-[2px]" onClick={(e) => e.stopPropagation()}>
+          <ControlButton
+            label={collapsed ? '□' : '_'}
+            title={collapsed ? `Expand ${title}` : `Collapse ${title}`}
             onClick={() => setCollapsed((was) => !was)}
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
-            className="raised btn font-chrome flex h-[15px] w-[16px] items-center justify-center pt-[1px] text-[8px] leading-none"
-          >
-            <span className="block">{collapsed ? '□' : '_'}</span>
-          </button>
-          <span aria-hidden className="flex gap-[2px]">
+          />
+          <span aria-hidden>
             <ControlButton label="□" />
-            <ControlButton label="✕" />
           </span>
+          <ControlButton label="✕" title={`Close ${title}`} onClick={() => setClosed(true)} />
         </div>
       </header>
 
@@ -89,11 +93,25 @@ export function Window({
   )
 }
 
-function ControlButton({ label }: { label: string }) {
+/** Sin `onClick` queda como adorno, sin foco ni anuncio para lectores de pantalla. */
+function ControlButton({
+  label,
+  title,
+  onClick,
+}: {
+  label: string
+  title?: string
+  onClick?: () => void
+}) {
+  const chrome =
+    'raised font-chrome flex h-[15px] w-[16px] items-center justify-center pt-[1px] text-[8px] leading-none'
+
+  if (!onClick) return <span className={chrome}>{label}</span>
+
   return (
-    <span className="raised font-chrome flex h-[15px] w-[16px] items-center justify-center pt-[1px] text-[8px] leading-none">
-      {label}
-    </span>
+    <button type="button" onClick={onClick} aria-label={title} title={title} className={`btn ${chrome}`}>
+      <span className="block">{label}</span>
+    </button>
   )
 }
 

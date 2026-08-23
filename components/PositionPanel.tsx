@@ -15,10 +15,6 @@ const PRESETS: { label: string; strategy: Strategy }[] = [
     label: '5 BTC → 200k USDC',
     strategy: { collateral: { asset: 'WBTC', amount: 5 }, debt: { asset: 'USDC', amount: 200_000 } },
   },
-  {
-    label: '200k USDC → 62 ETH',
-    strategy: { collateral: { asset: 'USDC', amount: 200_000 }, debt: { asset: 'WETH', amount: 62 } },
-  },
 ]
 
 /**
@@ -92,7 +88,16 @@ export function PositionPanel({
         disabled={running || sameAsset}
         className="mt-4 w-full px-4 py-3 text-[14px] tracking-[0.2em]"
       >
-        {running ? 'ATTACKING…' : 'ATTACK ME'}
+        {running ? (
+          'ATTACKING…'
+        ) : (
+          <>
+            {/* La fuente bitmap del chrome no tiene glifo para las espadas y
+                las dibuja como una equis: van con la fuente del sistema. */}
+            <span className="font-sans">⚔️</span> ATTACK ME{' '}
+            <span className="font-sans">⚔️</span>
+          </>
+        )}
       </Button>
     </fieldset>
   )

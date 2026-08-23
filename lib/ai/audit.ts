@@ -140,7 +140,7 @@ async function* audit(
     const verifiedHf = await verifyRecommendation(engine, opts.strategy, profile, rec)
     recommendations.push({
       profileLabel: profile.label,
-      benchmark: profile.benchmark,
+      benchmark: profile.benchmark(opts.strategy.collateral.asset),
       maxDebtUsd: rec.maxDebtUsd,
       repayUsd: rec.repayUsd,
       alreadySafe: rec.alreadySafe,
