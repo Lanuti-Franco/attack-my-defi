@@ -38,6 +38,8 @@ export const wethAbi = parseAbi(['function deposit() payable'])
 export interface PositionState {
   collateralUsd: number
   debtUsd: number
+  /** Cuánto más deja pedir Aave con este colateral, en USD. */
+  availableBorrowsUsd: number
   /** Liquidation threshold en fracción (0.83), convertido desde bps */
   liquidationThreshold: number
   /** Infinity cuando no hay deuda (Aave devuelve max uint256) */
@@ -55,11 +57,19 @@ export async function readPosition(user: Address): Promise<PositionState> {
     args: [user],
   })
 
-  const [totalCollateralBase, totalDebtBase, , currentLiquidationThreshold, , healthFactor] = r
+  const [
+    totalCollateralBase,
+    totalDebtBase,
+    availableBorrowsBase,
+    currentLiquidationThreshold,
+    ,
+    healthFactor,
+  ] = r
 
   return {
     collateralUsd: Number(formatUnits(totalCollateralBase, DECIMALS.base)),
     debtUsd: Number(formatUnits(totalDebtBase, DECIMALS.base)),
+    availableBorrowsUsd: Number(formatUnits(availableBorrowsBase, DECIMALS.base)),
     liquidationThreshold: Number(currentLiquidationThreshold) / 10_000,
     healthFactor:
       healthFactor === MAX_UINT256
@@ -80,9 +90,17 @@ export async function readAssetPrice(asset: Address): Promise<number> {
 }
 
 /** Custom errors de Aave, para no mostrar un hex crudo cuando algo revierte. */
-export const AAVE_ERRORS: Record<string, string> = {
-  '0x911ceb81': 'CollateralCannotCoverNewBorrow: el colateral no alcanza para ese préstamo',
-  '0x4b6b0ea3': 'HealthFactorLowerThanLiquidationThreshold',
+/**
+ * Los errores de Aave llegan como cuatro bytes sin nombre. Traducirlos es la
+ * diferencia entre "custom error 0x6679996d" y una frase que dice qué hacer.
+ *
+ * Los selectores están verificados con `cast sig`: el que había para el health
+ * factor estaba mal, así que el error más frecuente de todos —pedir prestado
+ * más de lo que el colateral aguanta— llegaba a la pantalla en crudo.
+ */
+const AAVE_ERRORS: Record<string, string> = {
+  '0x911ceb81': 'the collateral does not cover that loan',
+  '0x6679996d': 'that position would be liquidatable the moment it exists',
 }
 
 export function explainRevert(err: unknown): string {

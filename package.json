@@ -11,7 +11,8 @@
     "evidence": "tsx --env-file=.env.local scripts/evidence.ts",
     "impact-curve": "tsx --env-file=.env.local scripts/measure-impact-curve.ts",
     "curve-check": "tsx --env-file=.env.local scripts/curve-check.ts",
-    "combined-check": "tsx --env-file=.env.local scripts/combined-check.ts"
+    "combined-check": "tsx --env-file=.env.local scripts/combined-check.ts",
+    "too-large-check": "tsx --env-file=.env.local scripts/too-large-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.116.0",

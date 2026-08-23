@@ -1,7 +1,7 @@
 import { parseUnits, maxUint256, type Address } from 'viem'
 import { account, testClient } from '../chain/client'
 import { ADDRESSES, ASSETS, type AssetSymbol } from '../chain/addresses'
-import { poolAbi, erc20Abi, wethAbi } from '../chain/aave'
+import { poolAbi, erc20Abi, wethAbi, readPosition, readAssetPrice } from '../chain/aave'
 import { send } from '../chain/send'
 
 export interface Leg {
@@ -44,6 +44,38 @@ async function acquire(asset: AssetSymbol, amount: bigint): Promise<void> {
 }
 
 /**
+ * Un préstamo que Aave no va a permitir, explicado antes de intentarlo.
+ *
+ * Sin esto el intento revierte y llega a la pantalla como "custom error
+ * 0x6679996d", que no le dice nada a nadie. Lo que hace falta saber es cuánto
+ * sí entra, y ese número lo tiene Aave: `availableBorrowsBase` es exactamente
+ * cuánto más presta contra el colateral ya depositado.
+ */
+export class BorrowTooLargeError extends Error {
+  constructor(asked: number, allowed: number, asset: string) {
+    const fits = allowed.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    super(
+      `That loan does not fit: Aave lends at most ${fits} ${asset} against this collateral, ` +
+        `and you asked for ${asked.toLocaleString('en-US')}. Deposit more collateral, or borrow less.`,
+    )
+    this.name = 'BorrowTooLargeError'
+  }
+}
+
+/** Compara lo pedido contra lo que Aave dice que presta, antes de pedirlo. */
+async function assertBorrowFits(user: Address, spec: StrategySpec): Promise<void> {
+  const [state, unitPrice] = await Promise.all([
+    readPosition(user),
+    readAssetPrice(ASSETS[spec.debt.asset].address),
+  ])
+
+  const allowedUnits = unitPrice > 0 ? state.availableBorrowsUsd / unitPrice : 0
+  if (spec.debt.amount > allowedUnits) {
+    throw new BorrowTooLargeError(spec.debt.amount, allowedUnits, spec.debt.asset)
+  }
+}
+
+/**
  * Monta la estrategia como una posición real en el fork: conseguir el colateral,
  * depositarlo en Aave y tomar el préstamo. No es una simulación: son
  * transacciones que Aave procesa y contra las que después se mide.
@@ -74,6 +106,7 @@ export async function buildPosition(spec: StrategySpec): Promise<Address> {
 
   // interestRateMode 2 = variable
   if (debtAmount > 0n) {
+    await assertBorrowFits(user, spec)
     await send({
       address: ADDRESSES.pool,
       abi: poolAbi,
