@@ -4,6 +4,8 @@ import { vectorsFor, type AttackVector } from './vectors'
 import { ensureModel } from './localModel'
 import { severity, searchThreshold } from './liquidator'
 import { searchCombination, type KnownVector } from './combined'
+import { writeWarning } from './warning'
+import { gradeFor } from '../simulation/grade'
 import { RISK_PROFILES, recommendFor, type Recommendation } from '../simulation/riskProfiles'
 import type { Strategy, AuditEvent, RecommendationView } from '../schemas/strategy'
 
@@ -110,6 +112,18 @@ async function* audit(
   // El combinado va último a propósito: necesita saber cuánto aguantó cada
   // ataque por separado para poder pedir intensidades que solas no alcancen.
   yield* combinedPhase(engine, vectors, thresholds, measured, modelId)
+
+  // La calificación sale del ataque de precio, que es el único comparable con
+  // la historia: los tres días de referencia son caídas de mercado.
+  const priceThreshold = thresholds.get('price') ?? null
+  const grading = gradeFor(priceThreshold)
+  yield {
+    type: 'grade',
+    grade: grading.grade,
+    headline: grading.headline,
+    reference: grading.reference,
+    warning: await writeWarning(modelId, grading),
+  }
 
   // Las recomendaciones se despejan de la fórmula y después se verifican
   // simulando la posición ajustada: el número que se muestra tiene que

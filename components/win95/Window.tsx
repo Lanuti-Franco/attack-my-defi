@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 type WindowTone = 'normal' | 'dead'
 
@@ -24,6 +24,7 @@ export function Window({
   opening = false,
   className = '',
   startCollapsed = false,
+  collapseWhen = false,
   children,
 }: {
   title: string
@@ -33,9 +34,23 @@ export function Window({
   className?: string
   /** Para lo que es material de consulta y no hace falta tener abierto. */
   startCollapsed?: boolean
+  /**
+   * Se pliega sola cuando esto pasa a verdadero: al terminar la auditoría, el
+   * detalle de cada ataque ya cumplió y lo que importa es el veredicto. Se
+   * puede volver a abrir, así que no se pierde nada.
+   */
+  collapseWhen?: boolean
   children: ReactNode
 }) {
   const [collapsed, setCollapsed] = useState(startCollapsed)
+
+  // Sólo en el flanco: si se plegara en cada render, no habría forma de volver
+  // a abrirla mientras la condición siga dándose.
+  const wasAsked = useRef(collapseWhen)
+  useEffect(() => {
+    if (collapseWhen && !wasAsked.current) setCollapsed(true)
+    wasAsked.current = collapseWhen
+  }, [collapseWhen])
 
   return (
     <section

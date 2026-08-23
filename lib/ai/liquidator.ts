@@ -11,6 +11,7 @@ import { computeAttackerProfit } from "../simulation/liquidationProfit";
 import { readAssetPrice, type PositionState } from "../chain/aave";
 import { ASSETS } from "../chain/addresses";
 import { safeMessage } from "../chain/redact";
+import { completionText } from './completionText'
 
 /** Cuántas simulaciones puede pedir el atacante antes de que lo cortemos. */
 const MAX_STEPS = 8;
@@ -226,7 +227,7 @@ finds the answer far faster than sweeping in fixed increments.`,
 
   return {
     intensity,
-    rationale: (final as { content?: string }).content?.trim() ?? "",
+    rationale: completionText(final),
     // Que haya hecho falta corregir el valor no invalida la corrida, pero es
     // exactamente el tipo de cosa que hay que poder contar: es la diferencia
     // entre "el modelo usa bien las herramientas" y "el código lo sostiene".

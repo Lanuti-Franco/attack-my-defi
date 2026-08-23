@@ -131,6 +131,22 @@ export type AuditEvent =
       rationale: string
     }
   | { type: 'combinedDone'; liquidated: boolean; failure?: string }
+  /**
+   * Cómo quedó la posición, ubicada contra días que ocurrieron de verdad.
+   *
+   * Preguntar si se puede liquidar no distingue nada —con el colateral cayendo
+   * lo suficiente se liquida cualquiera—; lo que distingue es si el shock que
+   * la voltea es más chico o más grande que lo que ya pasó.
+   */
+  | {
+      type: 'grade'
+      grade: 'solid' | 'reasonable' | 'fragile' | 'reckless'
+      headline: string
+      /** Contra qué día histórico se la comparó. */
+      reference: string
+      /** La frase de cierre, escrita por el modelo y sin números. */
+      warning: string
+    }
   | { type: 'recommendations'; recommendations: RecommendationView[] }
 
 /** Recomendación tal como viaja al navegador (sin funciones). */

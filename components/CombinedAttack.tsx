@@ -40,9 +40,15 @@ export function combinedFrom(events: AuditEvent[]): CombinedView | null {
  * mezcla que probar. Cada intento se lee entero —qué mezcló, con qué fuerza y
  * qué contestó Aave— porque lo interesante es el criterio, no el número final.
  */
-export function CombinedAttack({ view }: { view: CombinedView }) {
+export function CombinedAttack({
+  view,
+  collapseWhen,
+}: {
+  view: CombinedView
+  collapseWhen: boolean
+}) {
   return (
-    <Window title="Combined attack" icon="🎯">
+    <Window title="Combined attack" icon="🎯" collapseWhen={collapseWhen}>
       <p className="font-mono mb-3 text-[12px] leading-relaxed text-(--ink-soft)">
         None of these attacks liquidates your position on its own. The model looks for a mix
         that does, using less of each one than it would take to break you alone.

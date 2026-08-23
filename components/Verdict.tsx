@@ -2,6 +2,7 @@
 
 import type { AuditEvent, RecommendationView } from '@/lib/schemas/strategy'
 import { Window } from '@/components/win95/Window'
+import type { Grading } from '@/lib/simulation/grade'
 import { usd } from '@/lib/format'
 
 interface Breach {
@@ -19,12 +20,21 @@ interface Breach {
  * ataque: -27% de ETH y una venta de 5.000 WETH no comparten escala, pero qué
  * tan lejos está cada uno de un mundo tranquilo sí se puede comparar.
  */
+/** El color de la calificación, del verde de una posición sana al rojo. */
+const GRADE_TONE: Record<Grading['grade'], string> = {
+  solid: 'var(--hp-high)',
+  reasonable: 'var(--hp-high)',
+  fragile: 'var(--hp-mid)',
+  reckless: 'var(--hp-low)',
+}
+
 export function Verdict({
   breaches,
   vectorsRun,
   recommendation,
   forkBlock,
   incomplete,
+  grading,
 }: {
   breaches: Breach[]
   vectorsRun: number
@@ -32,6 +42,7 @@ export function Verdict({
   forkBlock: string
   /** Si algo no se pudo medir: un ataque que falló, o una recomendación sin re-simular. */
   incomplete: boolean
+  grading: (Grading & { warning: string }) | null
 }) {
   const cheapest = breaches.reduce<Breach | null>(
     (best, b) => (best === null || b.severity < best.severity ? b : best),
@@ -41,13 +52,27 @@ export function Verdict({
 
   return (
     <Window title="Siege result" icon={broken ? '☠️' : '🛡️'} opening>
-      <p className="font-chrome text-[15px] leading-normal">
+      {/* La calificación va primero y grande. "Encontré dos formas de
+          romperte" es trivialmente cierto para cualquier posición —con el
+          colateral cayendo lo suficiente se liquida cualquiera—; lo que
+          responde algo es contra qué día de la historia se la compara. */}
+      {grading && (
+        <div className="mb-3">
+          <p
+            className="font-chrome text-[26px] leading-none"
+            style={{ color: GRADE_TONE[grading.grade] }}
+          >
+            {grading.headline}
+          </p>
+          <p className="font-mono mt-2 text-[13px] leading-relaxed">{grading.warning}</p>
+          <p className="font-mono mt-1 text-[11px] text-(--ink-soft)">{grading.reference}</p>
+        </div>
+      )}
+
+      <p className="font-chrome border-t-2 border-(--chrome-shadow) pt-3 text-[11px] leading-normal">
         {broken > 0
-          ? `I found ${broken} ${broken === 1 ? 'way' : 'ways'} to break you`
-          : 'I found no way to break you'}
-      </p>
-      <p className="font-mono mt-1 text-[12px] text-(--ink-soft)">
-        out of {vectorsRun} {vectorsRun === 1 ? 'attack tried' : 'attacks tried'}
+          ? `${broken} ${broken === 1 ? 'way' : 'ways'} in, out of ${vectorsRun} attacks tried`
+          : `No way in, out of ${vectorsRun} attacks tried`}
       </p>
 
       {cheapest && (

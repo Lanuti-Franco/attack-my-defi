@@ -5,6 +5,7 @@ import type { AttackVector } from './vectors'
 import type { ScenarioEngine } from '../simulation/scenarioEngine'
 import type { Mutation } from '../simulation/mutations'
 import { safeMessage } from '../chain/redact'
+import { completionText } from './completionText'
 
 /** Cuántas combinaciones se prueban antes de darse por vencido. */
 const MAX_TRIES = 6
@@ -302,7 +303,7 @@ Never estimate a health factor yourself. Only the tool knows it.`,
   if (process.env.DEBUG_COMBINED) {
     console.error(
       `[combinado] llamadas: ${JSON.stringify(calls)} · texto: ${
-        (final as { content?: string }).content?.slice(0, 200) ?? ''
+        (final as { contentText?: string }).contentText?.slice(0, 200) ?? ''
       }`,
     )
   }
@@ -325,6 +326,6 @@ Never estimate a health factor yourself. Only the tool knows it.`,
 
   return {
     ingredients,
-    rationale: (final as { content?: string }).content?.trim() ?? '',
+    rationale: completionText(final),
   }
 }

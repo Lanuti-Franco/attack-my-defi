@@ -114,6 +114,7 @@ export function AuditReport({
   const { position, vectors, recommendations, errors } = build(events)
 
   const combined = combinedFrom(events)
+  const gradeEvent = events.findLast((e) => e.type === 'grade')
   const running = vectors.find((v) => v.started && !v.done)
   const finished = recommendations.length > 0
 
@@ -141,14 +142,24 @@ export function AuditReport({
           recommendation={recommendations.find((r) => !r.alreadySafe) ?? recommendations[0] ?? null}
           forkBlock={forkBlock}
           incomplete={vectors.some((v) => v.failure) || combined?.failure !== undefined}
+          grading={
+            gradeEvent
+              ? {
+                  grade: gradeEvent.grade,
+                  headline: gradeEvent.headline,
+                  reference: gradeEvent.reference,
+                  warning: gradeEvent.warning,
+                }
+              : null
+          }
         />
       )}
 
-      {combined && <CombinedAttack view={combined} />}
+      {combined && <CombinedAttack view={combined} collapseWhen={finished} />}
 
       {vectors.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-          {focused ? <Console run={focused} /> : <Waiting />}
+          {focused ? <Console run={focused} collapseWhen={finished} /> : <Waiting />}
 
           <Window title="The attacks" icon="⚔️">
             <AttackQueue
@@ -170,7 +181,7 @@ export function AuditReport({
 }
 
 /** El ataque en foco, con el bucle completo. */
-function Console({ run }: { run: VectorRun }) {
+function Console({ run, collapseWhen }: { run: VectorRun; collapseWhen: boolean }) {
   const dead = run.done && run.thresholdLabel !== null
 
   return (
@@ -179,6 +190,7 @@ function Console({ run }: { run: VectorRun }) {
       icon={UNIT[run.id] ?? '⚔️'}
       tone={dead ? 'dead' : 'normal'}
       className="min-h-[22rem]"
+      collapseWhen={collapseWhen}
     >
       {dead ? (
         <BlueScreen run={run} />

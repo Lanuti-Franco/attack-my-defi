@@ -47,6 +47,11 @@ async function main() {
             : `   → ${ev.liquidated ? 'encontró una mezcla letal' : 'ninguna mezcla liquidó'}`,
         )
         break
+      case 'grade':
+        console.log(`\n═══ ${ev.headline.toUpperCase()} ═══`)
+        console.log(`   ${ev.warning}`)
+        console.log(`   (${ev.reference})`)
+        break
       case 'recommendations':
         console.log('\n═══ RECOMENDACIONES ═══')
         for (const r of ev.recommendations) {
