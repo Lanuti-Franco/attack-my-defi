@@ -140,6 +140,7 @@ export function AuditReport({
           vectorsRun={vectors.length}
           recommendation={recommendations.find((r) => !r.alreadySafe) ?? recommendations[0] ?? null}
           forkBlock={forkBlock}
+          incomplete={vectors.some((v) => v.failure) || combined?.failure !== undefined}
         />
       )}
 
@@ -259,6 +260,13 @@ function BlueScreen({ run }: { run: VectorRun }) {
         {run.attempts.length} probes against the fork. Every health factor came back from the
         Aave contract.
       </p>
+
+      {run.failure && (
+        <p className="mt-4">
+          The search stopped before converging, so a milder scenario might also be enough:{' '}
+          {run.failure}
+        </p>
+      )}
 
       <p className="mt-4">
         Press any key to continue <span className="blink">_</span>

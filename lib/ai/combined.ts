@@ -163,7 +163,7 @@ export async function* searchCombination(opts: {
   for (let step = 0; step < MAX_TRIES; step++) {
     let proposal: { ingredients: Ingredient[]; rationale: string } | null
     try {
-      proposal = await propose(modelId, known, tries, slots, seed)
+      proposal = await propose(modelId, known, tries, slots, seed, step)
     } catch (err) {
       return { tries, winner: null, wasted, failure: safeMessage(err) }
     }
@@ -221,6 +221,8 @@ async function propose(
   tries: Combination[],
   slots: Record<string, z.ZodTypeAny>,
   seed?: number,
+  /** Turnos ya gastados, incluidos los que no llegaron a simularse. */
+  spent = 0,
 ): Promise<{ ingredients: Ingredient[]; rationale: string } | null> {
   const history = tries.length
     ? tries
@@ -244,11 +246,15 @@ async function propose(
     generationParams: {
       ...GENERATION_PARAMS,
       ...(seed === undefined ? {} : { seed }),
-      // Cada intento fallido sube la temperatura. Con la temperatura fija de la
+      // Cada turno gastado sube la temperatura. Con la temperatura fija de la
       // búsqueda individual el modelo repite su primera idea hasta agotar el
       // presupuesto, y acá repetir no informa nada: lo que hace falta es que
       // pruebe otra cosa.
-      temp: Math.min(0.9, GENERATION_PARAMS.temp + tries.length * 0.15),
+      //
+      // Cuentan todos los turnos, no sólo los que llegaron a simularse: el caso
+      // que esto viene a resolver es justamente el de un modelo que repite, y
+      // una repetición no produce una simulación.
+      temp: Math.min(0.9, GENERATION_PARAMS.temp + spent * 0.15),
     },
     history: [
       {

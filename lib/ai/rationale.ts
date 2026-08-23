@@ -12,8 +12,24 @@
  * el modelo propone ya se muestra al lado, medido y verificado, así que lo que
  * queda —"el anterior aguantó, voy más fuerte"— es lo único que aportaba.
  */
-const NUMBER = /-?\d[\d.,]*/g
+const DIGITS = /-?\d[\d.,]*/g
+
+/**
+ * Los números escritos en palabras cuentan igual.
+ *
+ * Filtrar sólo dígitos deja pasar "should leave it around zero point nine six",
+ * que es un health factor inventado con todas las letras. El modelo responde en
+ * inglés, así que alcanza con la lista inglesa.
+ */
+const WORDS =
+  /\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|half|third|quarter)\b(\s*[-\s]\s*(point|and))?/gi
 
 export function withoutNumbers(text: string): string {
-  return text.replace(/\s+/g, ' ').trim().replace(NUMBER, '…')
+  return text
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(DIGITS, '…')
+    .replace(WORDS, '…')
+    // Varios reemplazos seguidos quedan como "… … …": uno alcanza.
+    .replace(/(…[\s.,-]*)+…/g, '…')
 }

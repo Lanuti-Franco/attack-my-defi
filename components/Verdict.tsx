@@ -24,11 +24,14 @@ export function Verdict({
   vectorsRun,
   recommendation,
   forkBlock,
+  incomplete,
 }: {
   breaches: Breach[]
   vectorsRun: number
   recommendation: RecommendationView | null
   forkBlock: string
+  /** Si algo no se pudo medir: un ataque que falló, o una recomendación sin re-simular. */
+  incomplete: boolean
 }) {
   const cheapest = breaches.reduce<Breach | null>(
     (best, b) => (best === null || b.severity < best.severity ? b : best),
@@ -87,8 +90,8 @@ export function Verdict({
           más; con esto es algo que cualquiera puede volver a correr.
           Por lo mismo no puede aparecer cuando la verificación no ocurrió. */}
       <p className="font-mono mt-3 border-t-2 border-(--chrome-shadow) pt-2 text-[11px] text-(--ink-soft)">
-        {recommendation && !recommendation.verified
-          ? `Attack thresholds verified against Aave V3 on an Ethereum mainnet fork · block ${forkBlock}. The suggested debt could not be re-simulated, so it comes from the formula alone.`
+        {incomplete || (recommendation && !recommendation.verified)
+          ? `Measured against Aave V3 on an Ethereum mainnet fork · block ${forkBlock}. Part of this audit could not be completed, so some of it is missing or unverified — see the attacks above.`
           : `Verified against Aave V3 on an Ethereum mainnet fork · block ${forkBlock}`}
       </p>
     </Window>

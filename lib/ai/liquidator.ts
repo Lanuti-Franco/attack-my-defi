@@ -283,7 +283,13 @@ export async function* searchThreshold(opts: {
 
       if (!choice) {
         stats.refusals++;
-        if (++refusals >= 2) break;
+        if (++refusals >= 2) {
+          // Rendirse porque el modelo dejó de contestar no es haber medido que
+          // el ataque no alcanza: es no haber medido nada. Si se confunden, la
+          // interfaz lo muestra como que la posición aguantó.
+          failure = "The model stopped calling the tool, so the search could not finish.";
+          break;
+        }
         continue;
       }
       if (choice.corrected) stats.corrections++;
@@ -331,6 +337,13 @@ export async function* searchThreshold(opts: {
     }
   } finally {
     if (vector.prepare) await engine.releasePrepared();
+  }
+
+  // Sin un solo sondeo válido no hay nada medido, cualquiera haya sido el
+  // motivo: agotar los pasos repitiendo escenarios deja el mismo vacío que un
+  // error de red.
+  if (probes.length === 0 && !failure) {
+    failure = "No scenario could be simulated, so nothing was measured.";
   }
 
   const { mildestKill } = bracketOf(probes, vector);

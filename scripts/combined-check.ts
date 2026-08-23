@@ -30,6 +30,24 @@ const BUDGET = 6
 /** Se puede barrer para ver a qué altura de la vara el problema deja de ser trivial. */
 const SUBCRITICAL = Number(process.argv[3] ?? 0.4)
 
+/**
+ * Un generador pseudoaleatorio con semilla, para que el baseline sea
+ * reproducible.
+ *
+ * Con `Math.random()` el número del azar cambiaba en cada corrida, así que el
+ * resultado publicado no se podía volver a obtener — y un baseline que no se
+ * puede reproducir no sirve para respaldar nada.
+ */
+function seededRandom(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0
+    return state / 0x100000000
+  }
+}
+
+const roll = seededRandom(20260823)
+
 /** Elige ataques e intensidades sin ningún criterio. El piso contra el que medir. */
 function randomCombination(all: KnownVector[]): Mutation[] {
   // Los mismos ataques que ve el modelo: los que necesitan preparar el mundo
@@ -37,14 +55,14 @@ function randomCombination(all: KnownVector[]): Mutation[] {
   const known = all.filter((k) => !k.vector.prepare)
   // Tantos ataques como puede combinar el modelo: si el azar sólo pudiera
   // elegir dos o tres y el modelo cuatro, la comparación estaría amañada.
-  const howMany = 2 + Math.floor(Math.random() * (known.length - 1))
-  const shuffled = [...known].sort(() => Math.random() - 0.5).slice(0, howMany)
+  const howMany = 2 + Math.floor(roll() * (known.length - 1))
+  const shuffled = [...known].sort(() => roll() - 0.5).slice(0, howMany)
 
   return shuffled.flatMap(({ vector, threshold }) => {
     const { safe } = vector.bounds
     const ceiling =
       threshold === null ? vector.bounds.extreme : safe + (threshold - safe) * SUBCRITICAL
-    return vector.mutate(safe + Math.random() * (ceiling - safe))
+    return vector.mutate(safe + roll() * (ceiling - safe))
   })
 }
 
@@ -110,6 +128,9 @@ async function main() {
     )
   }
 
+  // El promedio se calcula sólo sobre las corridas que liquidaron, así que se
+  // reporta junto con la tasa: "1,9 intentos" sin el "10 de 10" al lado diría
+  // muy poco, porque una rama que casi nunca gana puede tener un promedio bajo.
   const summarize = (label: string, tries: (number | null)[]) => {
     const wins = tries.filter((t): t is number => t !== null)
     const rate = (wins.length / tries.length) * 100

@@ -185,10 +185,12 @@ USDC:
 
 ```
   model    liquidated in 10/10 runs (100%) · 1.9 attempts on average
-  random   liquidated in  7/10 runs  (70%) · 2.9 attempts on average
+  random   liquidated in  8/10 runs  (80%) · 1.9 attempts on average
 ```
 
-`pnpm combined-check` runs it again.
+The advantage is reliability, not speed: the model finds the mix in every run, random misses
+two out of ten — and when random does hit, it takes just as long. The baseline uses a seeded
+generator so `pnpm combined-check` reproduces exactly these numbers.
 
 Getting to a number that means anything took three measurements, and the two failed ones are
 worth more than the final one.
