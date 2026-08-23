@@ -1,6 +1,6 @@
 'use client'
 
-type AttackState = 'pending' | 'running' | 'survived' | 'breached'
+type AttackState = 'pending' | 'running' | 'survived' | 'breached' | 'failed'
 
 export interface QueueItem {
   id: string
@@ -16,6 +16,7 @@ const MARK: Record<AttackState, string> = {
   running: '▶',
   survived: '✓',
   breached: '☠',
+  failed: '!',
 }
 
 const TONE: Record<AttackState, string> = {
@@ -23,6 +24,7 @@ const TONE: Record<AttackState, string> = {
   running: 'var(--ink)',
   survived: 'var(--hp-high)',
   breached: 'var(--hp-low)',
+  failed: 'var(--hp-mid)',
 }
 
 /**
@@ -83,5 +85,7 @@ function describe(item: QueueItem): string {
       return 'held'
     case 'breached':
       return item.thresholdLabel ?? 'broke through'
+    case 'failed':
+      return 'could not be measured'
   }
 }

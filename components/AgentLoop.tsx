@@ -2,6 +2,7 @@
 
 import type { AuditEvent } from '@/lib/schemas/strategy'
 import { hf } from '@/lib/format'
+import { withoutNumbers } from '@/lib/ai/rationale'
 
 type Attempt = Extract<AuditEvent, { type: 'attempt' }>
 
@@ -29,7 +30,7 @@ export function AgentLoop({ attempts, waiting }: { attempts: Attempt[]; waiting:
 
           {attempt.rationale && (
             <p className="mt-[2px] pl-6 text-[11px] leading-snug text-(--ink-soft)">
-              “{trim(attempt.rationale)}”
+              “{trim(withoutNumbers(attempt.rationale))}”
             </p>
           )}
 
@@ -65,6 +66,5 @@ export function AgentLoop({ attempts, waiting }: { attempts: Attempt[]; waiting:
  * de paso evita que un vector empuje a los demás fuera de la pantalla.
  */
 function trim(text: string): string {
-  const oneLine = text.replace(/\s+/g, ' ').trim()
-  return oneLine.length > 110 ? `${oneLine.slice(0, 108)}…` : oneLine
+  return text.length > 110 ? `${text.slice(0, 108)}…` : text
 }

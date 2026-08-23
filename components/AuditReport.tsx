@@ -30,6 +30,7 @@ interface VectorRun {
   thresholdLabel: string | null
   attackerProfitUsd?: number
   survivedMessage: string
+  failure?: string
   done: boolean
   started: boolean
 }
@@ -78,6 +79,7 @@ function build(events: AuditEvent[]) {
           v.thresholdLabel = ev.thresholdLabel
           v.attackerProfitUsd = ev.attackerProfitUsd
           v.survivedMessage = ev.survivedMessage
+          v.failure = ev.failure
           v.done = true
         }
         break
@@ -97,7 +99,9 @@ function build(events: AuditEvent[]) {
 function stateOf(run: VectorRun): QueueItem['state'] {
   if (!run.started) return 'pending'
   if (!run.done) return 'running'
-  return run.thresholdLabel ? 'breached' : 'survived'
+  if (run.thresholdLabel) return 'breached'
+  // Que la búsqueda se haya roto no es que la posición aguantara.
+  return run.failure ? 'failed' : 'survived'
 }
 
 export function AuditReport({
@@ -200,9 +204,13 @@ function Console({ run }: { run: VectorRun }) {
           {run.done && (
             <div className="mt-3 flex items-start gap-2 border-t-2 border-(--chrome-shadow) pt-3">
               <span aria-hidden className="text-[16px] leading-none">
-                🛡️
+                {run.failure ? '⚠️' : '🛡️'}
               </span>
-              <p className="font-mono text-[12px] leading-relaxed">{run.survivedMessage}</p>
+              <p className="font-mono text-[12px] leading-relaxed">
+                {run.failure
+                  ? `This attack could not be measured, so nothing can be said about it: ${run.failure}`
+                  : run.survivedMessage}
+              </p>
             </div>
           )}
         </>

@@ -56,6 +56,8 @@ async function* audit(
   const modelId = opts.modelId ?? (await ensureModel())
   const vectors = vectorsFor(opts.strategy)
   const thresholds = new Map<string, number | null>()
+  /** Los ataques cuyo umbral se pudo medir de verdad. */
+  const measured = new Set(vectors.map((v) => v.id))
 
   yield {
     type: 'auditStart',
@@ -94,15 +96,20 @@ async function* audit(
       attackerProfitUsd: outcome.attackerProfitUsd,
       steps: outcome.probes.length,
       severity: outcome.threshold === null ? null : severity(outcome.threshold, vector),
+      failure: outcome.failure,
       survivedMessage: vector.survivedMessage,
     }
 
-    thresholds.set(vector.id, outcome.threshold)
+    // Un umbral que no se pudo medir no es lo mismo que un ataque que no
+    // liquida. Si la búsqueda se cortó, este vector no entra al combinado:
+    // decirle al modelo que "nunca liquida solo" sería inventar.
+    if (!outcome.failure) thresholds.set(vector.id, outcome.threshold)
+    else measured.delete(vector.id)
   }
 
   // El combinado va último a propósito: necesita saber cuánto aguantó cada
   // ataque por separado para poder pedir intensidades que solas no alcancen.
-  yield* combinedPhase(engine, vectors, thresholds, modelId)
+  yield* combinedPhase(engine, vectors, thresholds, measured, modelId)
 
   // Las recomendaciones se despejan de la fórmula y después se verifican
   // simulando la posición ajustada: el número que se muestra tiene que
@@ -125,6 +132,7 @@ async function* audit(
       repayUsd: rec.repayUsd,
       alreadySafe: rec.alreadySafe,
       resultingHealthFactor: verifiedHf ?? rec.resultingHealthFactor,
+      verified: verifiedHf !== null,
     })
   }
 
@@ -180,10 +188,11 @@ async function* combinedPhase(
   engine: ScenarioEngine,
   vectors: AttackVector[],
   thresholds: Map<string, number | null>,
+  measured: Set<string>,
   modelId: string,
 ): AsyncGenerator<AuditEvent> {
   const known: KnownVector[] = vectors
-    .filter((v) => !v.prepare)
+    .filter((v) => !v.prepare && measured.has(v.id))
     .map((vector) => ({ vector, threshold: thresholds.get(vector.id) ?? null }))
 
   if (known.length < 2) return

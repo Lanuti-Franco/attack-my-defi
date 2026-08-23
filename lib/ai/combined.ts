@@ -40,6 +40,13 @@ export interface CombinedOutcome {
   /** La primera combinación que liquidó, si alguna lo logró. */
   winner: Combination | null
   failure?: string
+  /**
+   * Cuántos turnos se fueron sin producir una combinación nueva: el modelo no
+   * llamó a la herramienta, propuso un solo ingrediente, o repitió algo ya
+   * probado. Cuentan porque gastan presupuesto, y sin este número "no encontró
+   * nada en seis intentos" puede querer decir que sólo probó dos.
+   */
+  wasted: number
 }
 
 /** Lo que ya sabemos de cada ataque por separado, que es de dónde parte esto. */
@@ -58,7 +65,15 @@ export interface KnownVector {
  */
 function ceilingFor({ vector, threshold }: KnownVector): number {
   if (threshold === null) return vector.bounds.extreme
-  return threshold * SUBCRITICAL
+
+  // Se interpola desde el punto tranquilo hacia el umbral, no se multiplica el
+  // umbral por la fracción. No es lo mismo: un ataque que se mide como precio
+  // absoluto arranca en 1,00 y baja, así que multiplicar un umbral de $0,80 por
+  // 0,6 da $0,48 —bastante *más* severo que el umbral, justo lo contrario de lo
+  // que este tope tiene que garantizar—. Interpolando da $0,88, que sí queda
+  // corto por sí solo.
+  const { safe } = vector.bounds
+  return safe + (threshold - safe) * SUBCRITICAL
 }
 
 /**
@@ -131,8 +146,11 @@ export async function* searchCombination(opts: {
   // combinación. Con los que quedan alcanza de sobra para mezclar.
   const known = opts.known.filter((k) => !k.vector.prepare)
   if (known.length < 2) {
-    return { tries, winner: null, failure: 'At least two combinable attacks are needed.' }
+    return { tries, winner: null, wasted: 0, failure: 'At least two combinable attacks are needed.' }
   }
+
+  let wasted = 0
+  const alreadyTried = new Set<string>()
 
   const slots = Object.fromEntries(
     known.map((k) => [
@@ -146,12 +164,27 @@ export async function* searchCombination(opts: {
     try {
       proposal = await propose(modelId, known, tries, slots, seed)
     } catch (err) {
-      return { tries, winner: null, failure: safeMessage(err) }
+      return { tries, winner: null, wasted, failure: safeMessage(err) }
     }
 
     // Menos de dos ingredientes no es una combinación: es un ataque suelto que
     // ya sabemos que no alcanza.
-    if (!proposal || proposal.ingredients.length < 2) continue
+    if (!proposal || proposal.ingredients.length < 2) {
+      wasted++
+      continue
+    }
+
+    // Repetir una mezcla ya probada gasta un turno sin traer información: la
+    // cadena va a contestar exactamente lo mismo.
+    const fingerprint = proposal.ingredients
+      .map((ing) => `${ing.vectorId}:${ing.intensity.toFixed(4)}`)
+      .sort()
+      .join('|')
+    if (alreadyTried.has(fingerprint)) {
+      wasted++
+      continue
+    }
+    alreadyTried.add(fingerprint)
 
     const mutations: Mutation[] = proposal.ingredients.flatMap((ing) => {
       const vector = known.find((k) => k.vector.id === ing.vectorId)!.vector
@@ -163,7 +196,7 @@ export async function* searchCombination(opts: {
       const result = await engine.run(mutations)
       healthFactor = result.state.healthFactor
     } catch (err) {
-      return { tries, winner: null, failure: safeMessage(err) }
+      return { tries, winner: null, wasted, failure: safeMessage(err) }
     }
 
     const attempt: Combination = {
@@ -175,10 +208,10 @@ export async function* searchCombination(opts: {
     tries.push(attempt)
     yield attempt
 
-    if (attempt.liquidated) return { tries, winner: attempt }
+    if (attempt.liquidated) return { tries, winner: attempt, wasted }
   }
 
-  return { tries, winner: null }
+  return { tries, winner: null, wasted }
 }
 
 async function propose(

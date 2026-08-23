@@ -105,6 +105,14 @@ export type AuditEvent =
        * que permite ordenar ataques que se miden en unidades distintas.
        */
       severity: number | null
+      /**
+       * Por qué la búsqueda se cortó, si se cortó.
+       *
+       * Sin esto, una simulación que falla por un problema de red llega a la
+       * pantalla como "no encontró umbral", que se lee como que la posición
+       * aguantó. Una mala noticia silenciada es peor que un error.
+       */
+      failure?: string
       /** Qué significa que este vector no haya llegado a liquidar la posición. */
       survivedMessage: string
     }
@@ -135,4 +143,12 @@ export interface RecommendationView {
   repayUsd: number
   alreadySafe: boolean
   resultingHealthFactor: number
+  /**
+   * Si ese health factor lo confirmó Aave montando la posición ajustada, o si
+   * salió sólo de despejar la fórmula.
+   *
+   * La diferencia importa porque abajo del informe dice "verificado contra Aave
+   * V3", y esa frase no puede acompañar a un número que Aave nunca vio.
+   */
+  verified: boolean
 }

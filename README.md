@@ -174,7 +174,9 @@ changing the question.
 
 That is the uncomfortable question, and for bisection the honest answer is "not much". So the
 combined attack is measured against the dumbest possible baseline: picking attacks and
-intensities at random, with the same budget of attempts.
+intensities at random, with the same budget of attempts, the same cap per component and the
+same number of attacks to combine. On the reference position of 100 WETH against 150,000
+USDC:
 
 ```
   model    liquidated in 10/10 runs (100%) · 1.0 attempts on average

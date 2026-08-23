@@ -24,7 +24,8 @@ const STRATEGY: Strategy = {
   debt: { asset: 'USDC', amount: 150_000 },
 }
 
-const RUNS = Number(process.argv[2] ?? 3)
+/** Diez por defecto: es la cifra que el README publica. */
+const RUNS = Number(process.argv[2] ?? 10)
 const BUDGET = 6
 /** Se puede barrer para ver a qué altura de la vara el problema deja de ser trivial. */
 const SUBCRITICAL = Number(process.argv[3] ?? 0.6)
@@ -34,12 +35,15 @@ function randomCombination(all: KnownVector[]): Mutation[] {
   // Los mismos ataques que ve el modelo: los que necesitan preparar el mundo
   // quedan afuera de las dos ramas, o la comparación no sería justa.
   const known = all.filter((k) => !k.vector.prepare)
-  const howMany = 2 + Math.floor(Math.random() * 2)
+  // Tantos ataques como puede combinar el modelo: si el azar sólo pudiera
+  // elegir dos o tres y el modelo cuatro, la comparación estaría amañada.
+  const howMany = 2 + Math.floor(Math.random() * (known.length - 1))
   const shuffled = [...known].sort(() => Math.random() - 0.5).slice(0, howMany)
 
   return shuffled.flatMap(({ vector, threshold }) => {
-    const ceiling = threshold === null ? vector.bounds.extreme : threshold * SUBCRITICAL
     const { safe } = vector.bounds
+    const ceiling =
+      threshold === null ? vector.bounds.extreme : safe + (threshold - safe) * SUBCRITICAL
     return vector.mutate(safe + Math.random() * (ceiling - safe))
   })
 }
@@ -84,7 +88,9 @@ async function main() {
     console.log(
       `  model   run ${i + 1}: ${
         used === null ? `no liquidation in ${outcome.tries.length}` : `liquidated in ${used}`
-      }` + (outcome.winner ? ` · HF ${outcome.winner.healthFactor.toFixed(4)}` : ''),
+      }` +
+        (outcome.winner ? ` · HF ${outcome.winner.healthFactor.toFixed(4)}` : '') +
+        (outcome.wasted ? ` · ${outcome.wasted} wasted turns` : ''),
     )
   }
 

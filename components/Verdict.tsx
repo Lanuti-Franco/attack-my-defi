@@ -77,13 +77,19 @@ export function Verdict({
               bring the debt down to {usd(recommendation.maxDebtUsd)}
             </p>
           )}
+          {!recommendation.verified && (
+            <p className="mt-1 text-[11px] text-(--ink-soft)">not re-simulated</p>
+          )}
         </div>
       )}
 
       {/* La línea que sostiene todo lo de arriba. Sin esto es una afirmación
-          más; con esto es algo que cualquiera puede volver a correr. */}
+          más; con esto es algo que cualquiera puede volver a correr.
+          Por lo mismo no puede aparecer cuando la verificación no ocurrió. */}
       <p className="font-mono mt-3 border-t-2 border-(--chrome-shadow) pt-2 text-[11px] text-(--ink-soft)">
-        Verified against Aave V3 on an Ethereum mainnet fork · block {forkBlock}
+        {recommendation && !recommendation.verified
+          ? `Attack thresholds verified against Aave V3 on an Ethereum mainnet fork · block ${forkBlock}. The suggested debt could not be re-simulated, so it comes from the formula alone.`
+          : `Verified against Aave V3 on an Ethereum mainnet fork · block ${forkBlock}`}
       </p>
     </Window>
   )
