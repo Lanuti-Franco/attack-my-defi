@@ -16,8 +16,8 @@ const TOLERANCE = 0.002
 
 async function main() {
   const block = await publicClient.getBlockNumber()
-  console.log(`curva medida en el bloque ${IMPACT_CURVE_BLOCK} · fork en ${block}\n`)
-  console.log('  cantidad    tabla    cotizado   desvío')
+  console.log(`curve measured at block ${IMPACT_CURVE_BLOCK} · fork at ${block}\n`)
+  console.log('  amount     table     quoted     drift')
 
   let worst = 0
   for (const amount of BETWEEN_POINTS) {
@@ -31,12 +31,12 @@ async function main() {
     )
   }
 
-  console.log(`\npeor desvío: ${(worst * 100).toFixed(3)} puntos porcentuales`)
+  console.log(`\nworst drift: ${(worst * 100).toFixed(3)} percentage points`)
   if (worst > TOLERANCE) {
-    console.error('La tabla se aparta demasiado: hacen falta más puntos.')
+    console.error('The table drifts too far: more points are needed.')
     process.exit(1)
   }
-  console.log('La tabla dice lo mismo que cotizar.')
+  console.log('The table says the same as quoting.')
 }
 
 main().catch((err) => {

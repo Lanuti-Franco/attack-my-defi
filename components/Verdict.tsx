@@ -37,7 +37,7 @@ export function Verdict({
   const broken = breaches.length
 
   return (
-    <Window title="Resultado del asedio" icon={broken ? '☠️' : '🛡️'} opening>
+    <Window title="Siege result" icon={broken ? '☠️' : '🛡️'} opening>
       <p className="font-chrome text-[15px] leading-normal">
         {broken > 0
           ? `I found ${broken} ${broken === 1 ? 'way' : 'ways'} to break you`

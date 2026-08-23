@@ -50,8 +50,8 @@ async function main() {
   const modelId = await ensureModel()
   const vectors = vectorsFor(STRATEGY)
 
-  console.log(`posición: HF ${base.healthFactor.toFixed(4)}`)
-  console.log('midiendo primero cuánto aguanta cada ataque por separado…\n')
+  console.log(`position: HF ${base.healthFactor.toFixed(4)}`)
+  console.log('first measuring how much each attack takes on its own…\n')
 
   // Los umbrales individuales son el punto de partida: sin ellos no se sabe qué
   // intensidad es "insuficiente por sí sola".
@@ -66,12 +66,12 @@ async function main() {
     const say = vector.formatForModel ?? vector.format
     console.log(
       `  ${vector.label.padEnd(28)} ${
-        step.value.threshold === null ? 'no liquida solo' : say(step.value.threshold)
+        step.value.threshold === null ? 'no liquidation alone' : say(step.value.threshold)
       }`,
     )
   }
 
-  console.log(`\ncombinando, ${RUNS} corridas de cada uno, ${BUDGET} intentos como techo\n`)
+  console.log(`\ncombining, ${RUNS} runs each, ${BUDGET} attempts as the cap\n`)
 
   const modelTries: (number | null)[] = []
   for (let i = 0; i < RUNS; i++) {
@@ -82,8 +82,8 @@ async function main() {
     const used = outcome.winner ? outcome.tries.length : null
     modelTries.push(used)
     console.log(
-      `  modelo  corrida ${i + 1}: ${
-        used === null ? `sin liquidar en ${outcome.tries.length}` : `liquidó en ${used}`
+      `  model   run ${i + 1}: ${
+        used === null ? `no liquidation in ${outcome.tries.length}` : `liquidated in ${used}`
       }` + (outcome.winner ? ` · HF ${outcome.winner.healthFactor.toFixed(4)}` : ''),
     )
   }
@@ -99,7 +99,9 @@ async function main() {
       }
     }
     randomTries.push(used)
-    console.log(`  azar    corrida ${i + 1}: ${used === null ? `sin liquidar en ${BUDGET}` : `liquidó en ${used}`}`)
+    console.log(
+      `  random  run ${i + 1}: ${used === null ? `no liquidation in ${BUDGET}` : `liquidated in ${used}`}`,
+    )
   }
 
   const summarize = (label: string, tries: (number | null)[]) => {
@@ -107,14 +109,14 @@ async function main() {
     const rate = (wins.length / tries.length) * 100
     const avg = wins.length ? wins.reduce((a, b) => a + b, 0) / wins.length : null
     console.log(
-      `  ${label.padEnd(8)} liquidó en ${wins.length}/${tries.length} corridas (${rate.toFixed(0)}%)` +
-        (avg === null ? '' : ` · ${avg.toFixed(1)} intentos en promedio`),
+      `  ${label.padEnd(8)} liquidated in ${wins.length}/${tries.length} runs (${rate.toFixed(0)}%)` +
+        (avg === null ? '' : ` · ${avg.toFixed(1)} attempts on average`),
     )
   }
 
   console.log(`\n${'─'.repeat(64)}`)
-  summarize('modelo', modelTries)
-  summarize('azar', randomTries)
+  summarize('model', modelTries)
+  summarize('random', randomTries)
 }
 
 main()

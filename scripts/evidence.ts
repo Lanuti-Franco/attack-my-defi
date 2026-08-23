@@ -48,15 +48,15 @@ async function main() {
   const modelId = await ensureModel()
 
   const vector = vectorsFor(STRATEGY).find((v) => v.id === VECTOR_ID)
-  if (!vector) throw new Error(`El vector ${VECTOR_ID} no aplica a esta posición`)
+  if (!vector) throw new Error(`Attack ${VECTOR_ID} does not apply to this position`)
 
-  console.log(`Evidencia de tool use — ${MODEL_LABEL}, local vía QVAC`)
+  console.log(`Tool use evidence — ${MODEL_LABEL}, running locally via QVAC`)
   console.log(
-    `Posición: ${STRATEGY.collateral.amount} ${STRATEGY.collateral.asset} / ` +
-      `${STRATEGY.debt.amount.toLocaleString('es-AR')} ${STRATEGY.debt.asset} · ` +
-      `HF inicial ${base.healthFactor.toFixed(4)}`,
+    `Position: ${STRATEGY.collateral.amount} ${STRATEGY.collateral.asset} / ` +
+      `${STRATEGY.debt.amount.toLocaleString('en-US')} ${STRATEGY.debt.asset} · ` +
+      `starting HF ${base.healthFactor.toFixed(4)}`,
   )
-  console.log(`Vector: ${vector.label} · ${RUNS} corridas, una semilla distinta cada una\n`)
+  console.log(`Attack: ${vector.label} · ${RUNS} runs, a different seed each time\n`)
 
   const runs: Run[] = []
   for (let i = 0; i < RUNS; i++) {
@@ -79,8 +79,8 @@ async function main() {
 
     const last = runs[runs.length - 1]
     console.log(
-      `  semilla ${pad(seed, 3)} → ${pad(last.label ?? 'no liquidó', 12)} ` +
-        `en ${pad(last.probes, 2)} sondeos · ${pad(last.seconds.toFixed(0), 3)}s`,
+      `  seed ${pad(seed, 3)} → ${pad(last.label ?? 'no liquidation', 14)} ` +
+        `in ${pad(last.probes, 2)} probes · ${pad(last.seconds.toFixed(0), 3)}s`,
     )
   }
 
@@ -88,14 +88,14 @@ async function main() {
   const found = runs.filter((r) => r.threshold !== null)
   console.log(`\n${'─'.repeat(64)}`)
   if (found.length === 0) {
-    console.log('Ninguna corrida encontró umbral.')
+    console.log('No run found a threshold.')
   } else {
     const values = found.map((r) => r.threshold as number)
     const mean = values.reduce((a, b) => a + b, 0) / values.length
     const spread = Math.max(...values) - Math.min(...values)
     console.log(
-      `Umbral: encontrado en ${found.length}/${RUNS} corridas · ` +
-        `promedio ${mean.toFixed(2)} · dispersión ${spread.toFixed(2)} puntos`,
+      `Threshold: found in ${found.length}/${RUNS} runs · ` +
+        `mean ${mean.toFixed(2)} · spread ${spread.toFixed(2)} points`,
     )
   }
 
@@ -113,13 +113,13 @@ async function main() {
   const rate = totals.calls ? (clean / totals.calls) * 100 : 0
 
   console.log(
-    `Tool use: ${totals.calls} pedidos · ${clean} devolvieron una llamada usable sin ` +
-      `retoques (${rate.toFixed(0)}%)`,
+    `Tool use: ${totals.calls} requests · ${clean} returned a usable call with no ` +
+      `fixing (${rate.toFixed(0)}%)`,
   )
   console.log(
-    `  contestó en prosa sin llamar a la herramienta: ${totals.refusals}\n` +
-      `  propuso un valor fuera de rango, hubo que acotarlo: ${totals.corrections}\n` +
-      `  propuso un escenario ya probado: ${totals.repeats}`,
+    `  answered in prose without calling the tool: ${totals.refusals}\n` +
+      `  proposed an out-of-range value, had to be clamped: ${totals.corrections}\n` +
+      `  proposed a scenario already tried: ${totals.repeats}`,
   )
 }
 

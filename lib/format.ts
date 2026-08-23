@@ -6,8 +6,14 @@
  * pantallas y ve el mismo valor escrito distinto.
  */
 
-/** Dólares, sin centavos: a esta escala los centavos son ruido. */
-export const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
+/**
+ * Dólares, sin centavos: a esta escala los centavos son ruido.
+ *
+ * La configuración regional va fija en inglés y no toma la del navegador: en
+ * castellano el punto separa los miles, así que `$33.620` dentro de una frase
+ * en inglés se lee como treinta y tres dólares con sesenta y dos.
+ */
+export const usd = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 
 /**
  * Health factor con cuatro decimales.
