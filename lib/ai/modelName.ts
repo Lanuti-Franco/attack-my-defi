@@ -1,8 +1,6 @@
 /**
- * Cómo se llama el modelo, para mostrarlo.
- *
- * Vive separado de `localModel.ts` porque ese módulo importa el SDK de QVAC,
- * que es nativo y no puede cruzar al navegador. Acá sólo hay texto.
+ * Cómo se llama el modelo, para mostrarlo. Separado de `localModel.ts` porque
+ * ese importa el SDK de QVAC, que es nativo y no cruza al navegador.
  *
  * Si cambia `MODEL_SRC`, esto tiene que cambiar con él.
  */

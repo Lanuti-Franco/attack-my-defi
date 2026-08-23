@@ -1,24 +1,7 @@
-/**
- * Cómo se muestran los números que salen de la cadena.
- *
- * Viven juntos porque estaban repetidos en cuatro componentes, y dos copias de
- * un formateador terminan divergiendo justo cuando alguien compara dos
- * pantallas y ve el mismo valor escrito distinto.
- */
+/** Cómo se muestran los números que llegan de la cadena. */
 
-/**
- * Dólares, sin centavos: a esta escala los centavos son ruido.
- *
- * La configuración regional va fija en inglés y no toma la del navegador: en
- * castellano el punto separa los miles, así que `$33.620` dentro de una frase
- * en inglés se lee como treinta y tres dólares con sesenta y dos.
- */
+/** Locale fijo: con el separador castellano, `$33.620` dentro de una frase en inglés se lee mal. */
 export const usd = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 
-/**
- * Health factor con cuatro decimales.
- *
- * Aave devuelve infinito cuando no hay deuda, y se muestra tal cual: una
- * posición sin deuda no es que aguante mucho, es que no puede liquidarse.
- */
+/** Aave devuelve infinito sin deuda: no es que aguante mucho, es que no puede liquidarse. */
 export const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))

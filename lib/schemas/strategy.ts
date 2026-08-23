@@ -83,11 +83,7 @@ export type AuditEvent =
       healthFactor: number
       verdict: 'SURVIVED' | 'LIQUIDATABLE'
       collateralUsd: number
-      /**
-       * Por qué el modelo eligió este escenario. Es la mitad del bucle que de
-       * otro modo no se ve: sin esto la auditoría parece una lista de pruebas
-       * predeterminadas en vez de una búsqueda.
-       */
+      /** Por qué el modelo eligió este escenario. */
       rationale: string
     }
   | {
@@ -99,29 +95,16 @@ export type AuditEvent =
       attackerProfitUsd?: number
       steps: number
       /**
-       * Qué tan poco hace falta para romper la posición por acá: 0 es un mundo
-       * tranquilo y 1 el escenario más extremo que este vector contempla. Es lo
-       * que permite ordenar ataques que se miden en unidades distintas.
+       * 0 es un mundo tranquilo y 1 el escenario más extremo. Es lo único que
+       * permite comparar ataques que se miden en unidades distintas.
        */
       severity: number | null
-      /**
-       * Por qué la búsqueda se cortó, si se cortó.
-       *
-       * Sin esto, una simulación que falla por un problema de red llega a la
-       * pantalla como "no encontró umbral", que se lee como que la posición
-       * aguantó. Una mala noticia silenciada es peor que un error.
-       */
+      /** Por qué se cortó la búsqueda. Sin esto, un fallo se lee como que la posición aguantó. */
       failure?: string
       /** Qué significa que este vector no haya llegado a liquidar la posición. */
       survivedMessage: string
     }
-  /**
-   * El ataque combinado: el modelo mezcla ataques que por separado no alcanzan.
-   *
-   * Va aparte de los demás porque no busca un umbral —no hay un solo número que
-   * encontrar— sino una mezcla que funcione, y porque es el único lugar donde
-   * el modelo hace algo que el código no podría hacer igual de bien.
-   */
+  /** El combinado va aparte: no busca un umbral, busca una mezcla que funcione. */
   | { type: 'combinedStart'; available: { id: string; label: string }[] }
   | {
       type: 'combinedTry'
@@ -131,13 +114,7 @@ export type AuditEvent =
       rationale: string
     }
   | { type: 'combinedDone'; liquidated: boolean; failure?: string }
-  /**
-   * Cómo quedó la posición, ubicada contra días que ocurrieron de verdad.
-   *
-   * Preguntar si se puede liquidar no distingue nada —con el colateral cayendo
-   * lo suficiente se liquida cualquiera—; lo que distingue es si el shock que
-   * la voltea es más chico o más grande que lo que ya pasó.
-   */
+  /** Cómo quedó la posición, ubicada contra días que ocurrieron de verdad. */
   | {
       type: 'grade'
       grade: 'solid' | 'reasonable' | 'fragile' | 'reckless'
@@ -157,12 +134,6 @@ export interface RecommendationView {
   repayUsd: number
   alreadySafe: boolean
   resultingHealthFactor: number
-  /**
-   * Si ese health factor lo confirmó Aave montando la posición ajustada, o si
-   * salió sólo de despejar la fórmula.
-   *
-   * La diferencia importa porque abajo del informe dice "verificado contra Aave
-   * V3", y esa frase no puede acompañar a un número que Aave nunca vio.
-   */
+  /** Si Aave confirmó ese health factor, o si salió sólo de la fórmula. */
   verified: boolean
 }

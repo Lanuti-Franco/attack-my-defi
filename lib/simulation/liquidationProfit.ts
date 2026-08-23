@@ -11,17 +11,14 @@ import { readReserveConfig } from '../chain/aave'
  * y por lo tanto su incentivo para corromper el oráculo.
  */
 export interface AttackerProfit {
-  /** Deuda que el liquidador repaga, en USD */
   debtRepaidUsd: number
-  /** Unidades de colateral que se lleva */
+  /** Unidades de colateral, no dólares. */
   collateralSeized: number
-  /** Lo que valen esas unidades al precio real de mercado */
   collateralMarketValueUsd: number
-  /** Ganancia neta del atacante */
   profitUsd: number
-  /** Bonus de liquidación que publica Aave, en fracción */
+  /** El que publica Aave, en fracción. */
   liquidationBonus: number
-  /** true si el colateral de la posición no alcanzaba para pagar el bonus completo */
+  /** El colateral no alcanzaba para pagar el bonus completo. */
   cappedByCollateral: boolean
 }
 
@@ -35,15 +32,12 @@ function closeFactor(healthFactor: number): number {
 
 export async function computeAttackerProfit(params: {
   collateralAsset: AssetSymbol
-  /** Deuda total de la posición, en USD */
   debtUsd: number
-  /** Colateral de la posición, en USD al precio real de mercado */
+  /** Al precio real de mercado, no al del oráculo. */
   collateralUsd: number
-  /** Health factor con el precio manipulado */
+  /** El que resulta del precio manipulado. */
   healthFactor: number
-  /** Precio del colateral que reporta el oráculo manipulado */
   manipulatedPrice: number
-  /** Precio del colateral en el mercado real, sin manipular */
   marketPrice: number
 }): Promise<AttackerProfit | null> {
   // Aave no permite liquidar una posición sana: sin eso, no hay ataque que valga.

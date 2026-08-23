@@ -1,18 +1,12 @@
 'use client'
 
 /**
- * Los sonidos del asedio, sintetizados en el navegador.
+ * Los sonidos del asedio, sintetizados: ni un archivo de audio, ni un sample de
+ * un juego que no es nuestro.
  *
- * Ni un archivo de audio: además de pesar cero, evita el problema obvio de
- * agarrar los samples de un juego que no es nuestro.
- *
- * Lo que los hace sonar a impacto y no a beep es el ruido filtrado. Un tono
- * puro suena a PC vieja; un golpe real es un estallido de ruido que se apaga
- * rápido, con un poco de cuerpo grave abajo. Cada golpe de acá es esas dos
- * cosas sumadas.
- *
- * El navegador no deja sonar nada hasta que la persona interactúa con la
- * página, y eso acá juega a favor: el primer sonido es el click en Attack me.
+ * Lo que suena a impacto y no a beep es el ruido filtrado. Un tono puro suena a
+ * PC vieja; un golpe es un estallido de ruido que se apaga rápido con cuerpo
+ * grave abajo.
  */
 type Cue = 'click' | 'open' | 'hit' | 'defeat' | 'survive' | 'done'
 
@@ -114,25 +108,24 @@ function tone(
 
 function render(ctx: AudioContext, cue: Cue, now: number): void {
   switch (cue) {
-    // Madera seca: el chasquido de un botón físico.
+    // Madera seca.
     case 'click':
       thud(ctx, now, { duration: 0.05, from: 3000, to: 700, gain: 0.25 })
       tone(ctx, now, { freq: 180, duration: 0.05, gain: 0.12 })
       return
 
-    // Una unidad más entra en posición.
     case 'open':
       tone(ctx, now, { freq: 330, duration: 0.07, gain: 0.1, wave: 'triangle' })
       tone(ctx, now + 0.07, { freq: 495, duration: 0.09, gain: 0.1, wave: 'triangle' })
       return
 
-    // El ariete contra la puerta: madera pesada, con el retumbe grave abajo.
+    // El ariete contra la puerta.
     case 'hit':
       thud(ctx, now, { duration: 0.22, from: 1800, to: 120, gain: 0.5 })
       tone(ctx, now, { freq: 90, duration: 0.28, slideTo: 45, gain: 0.35 })
       return
 
-    // La estructura cede: tres golpes y el derrumbe.
+    // Tres golpes y el derrumbe.
     case 'defeat':
       thud(ctx, now, { duration: 0.18, from: 1600, to: 100, gain: 0.45 })
       tone(ctx, now, { freq: 80, duration: 0.2, slideTo: 50, gain: 0.3 })
@@ -142,14 +135,13 @@ function render(ctx: AudioContext, cue: Cue, now: number): void {
       tone(ctx, now + 0.42, { freq: 60, duration: 0.9, slideTo: 28, gain: 0.4 })
       return
 
-    // El golpe rebota contra el muro: metálico y corto.
+    // El golpe rebota contra el muro.
     case 'survive':
       thud(ctx, now, { duration: 0.09, from: 5000, to: 2200, gain: 0.22 })
       tone(ctx, now, { freq: 740, duration: 0.1, gain: 0.1, wave: 'triangle' })
       tone(ctx, now + 0.05, { freq: 1110, duration: 0.12, gain: 0.08, wave: 'triangle' })
       return
 
-    // Se terminó el asedio: el informe está listo.
     case 'done':
       tone(ctx, now, { freq: 392, duration: 0.11, gain: 0.11, wave: 'triangle' })
       tone(ctx, now + 0.12, { freq: 523, duration: 0.11, gain: 0.11, wave: 'triangle' })

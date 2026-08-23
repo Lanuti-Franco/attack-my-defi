@@ -18,7 +18,7 @@ const MAX_STEPS = 8;
 /**
  * Convergencia: cuando el rango entre "sobrevive" y "se liquida" baja del 4% del
  * espacio de búsqueda, refinar más no cambia lo que se ve en pantalla y sí
- * alarga la auditoría, que corre seis vectores seguidos.
+ * alarga la auditoría, que corre un ataque tras otro.
  */
 const CONVERGENCE_FRACTION = 0.04;
 

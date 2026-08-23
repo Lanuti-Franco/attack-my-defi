@@ -33,12 +33,9 @@ export function combinedFrom(events: AuditEvent[]): CombinedView | null {
 }
 
 /**
- * El ataque combinado.
- *
- * Es el único donde el modelo hace algo que el código no podría hacer igual de
- * bien, y por eso se muestra distinto: no hay un umbral que encontrar, hay una
- * mezcla que probar. Cada intento se lee entero —qué mezcló, con qué fuerza y
- * qué contestó Aave— porque lo interesante es el criterio, no el número final.
+ * El ataque combinado. Se muestra distinto porque no hay un umbral que
+ * encontrar sino una mezcla que probar, y lo interesante es el criterio con el
+ * que la eligió, no el número final.
  */
 export function CombinedAttack({
   view,

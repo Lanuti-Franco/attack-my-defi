@@ -5,18 +5,11 @@ import type { Grading } from '../simulation/grade'
 import { completionText } from './completionText'
 
 /**
- * La frase con la que cierra el informe, escrita por el modelo.
+ * La frase de cierre, y el único texto que el modelo redacta libremente.
  *
- * Es el único texto de toda la app que el modelo redacta libremente, y está
- * puesto acá a propósito: escribir es lo que un modelo de lenguaje hace bien.
- * La calificación —sólida, frágil, temeraria— la decide el código comparando
- * contra tres días que ocurrieron de verdad; el modelo sólo le pone las
- * palabras, y le tocan distintas cada vez en lugar de una plantilla fija.
- *
- * Nada de lo que escriba puede convertirse en un dato: el texto pasa por el
- * mismo filtro que el resto, así que si intenta deslizar una cifra no llega a
- * la pantalla. Y si el modelo falla o se va por las ramas, queda la frase de
- * respaldo, que dice lo mismo sin adornos.
+ * La calificación la decide el código contra tres días reales; el modelo sólo
+ * le pone palabras, distintas cada vez. Pasa por el filtro de números, así que
+ * no puede deslizar una cifra, y si falla queda la frase de respaldo.
  */
 export async function writeWarning(modelId: string, grading: Grading): Promise<string> {
   try {

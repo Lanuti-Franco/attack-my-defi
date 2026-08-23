@@ -5,17 +5,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 type WindowTone = 'normal' | 'dead'
 
 /**
- * Una ventana del sistema: barra de título, botones de control y el marco
- * hundido donde vive el contenido.
- *
- * El botón de minimizar funciona: colapsa la ventana a su barra de título. Con
- * la auditoría entera desplegada la página se hace larga, y poder plegar lo que
- * ya se leyó es exactamente para lo que servía ese botón.
- *
- * Los otros dos no hacen nada y están puestos igual: son parte de lo que hace
- * reconocible a una ventana, y sacarlos por decorativos deja algo que ya no se
- * lee como una ventana. Van marcados como tales para que un lector de pantalla
- * no los ofrezca como acciones.
+ * Una ventana del sistema. El botón de minimizar funciona; los otros dos son
+ * decorativos —sacarlos deja algo que ya no se lee como una ventana— y van
+ * marcados como tales para que un lector de pantalla no los ofrezca.
  */
 export function Window({
   title,
@@ -106,12 +98,8 @@ function ControlButton({ label }: { label: string }) {
 }
 
 /**
- * La barra de progreso del sistema, en su versión indeterminada: los bloques
- * desfilan sin llegar a ningún lado.
- *
- * Es la única honesta acá. No sabemos cuántos sondeos va a necesitar el modelo
- * hasta que termina, así que una barra que avanzara hasta un total sería una
- * invención — y este proyecto se trata justamente de no inventar números.
+ * Indeterminada a propósito: no sabemos cuántos sondeos va a necesitar el
+ * modelo, y una barra que avanzara hasta un total sería un número inventado.
  */
 export function ProgressBar() {
   return (

@@ -9,13 +9,9 @@ type Attempt = Extract<AuditEvent, { type: 'attempt' }>
 /**
  * El ida y vuelta entre el modelo y la cadena, paso por paso.
  *
- * Es la parte que hay que poder ver para creerle al resultado. Una lista de
- * intentos con su health factor parece un puñado de pruebas predeterminadas;
- * lo que muestra que hay una búsqueda es el turno: el modelo propone un
- * escenario y dice por qué, la cadena responde con un número que el modelo no
- * eligió, y el modelo usa esa respuesta para decidir el paso siguiente.
- *
- * Por eso cada paso son dos líneas y no una. Quién dice qué es la información.
+ * Cada paso son dos líneas y no una porque quién dice qué es la información:
+ * el modelo propone y explica, la cadena contesta con un número que el modelo
+ * no eligió.
  */
 export function AgentLoop({ attempts, waiting }: { attempts: Attempt[]; waiting: boolean }) {
   return (

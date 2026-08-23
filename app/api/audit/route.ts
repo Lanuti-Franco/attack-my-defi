@@ -5,7 +5,7 @@ import { safeMessage } from '@/lib/chain/redact'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-/** La auditoría corre seis vectores seguidos: puede llevar varios minutos. */
+/** La auditoría corre un ataque tras otro: puede llevar varios minutos. */
 export const maxDuration = 900
 
 const requestSchema = z.object({ strategy: strategySchema })
