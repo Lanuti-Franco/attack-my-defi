@@ -201,7 +201,7 @@ async function* combinedPhase(
       type: 'combinedTry',
       ingredients: attempt.ingredients.map((ing) => {
         const vector = known.find((k) => k.vector.id === ing.vectorId)!.vector
-        return { vectorId: ing.vectorId, label: ing.label, shown: vector.format(ing.intensity) }
+        return { vectorId: ing.vectorId, shown: vector.format(ing.intensity) }
       }),
       healthFactor: attempt.healthFactor,
       liquidated: attempt.liquidated,

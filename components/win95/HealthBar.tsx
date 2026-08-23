@@ -9,7 +9,7 @@
  * barra está vacía. De 2,0 para arriba está llena, porque más holgura que esa
  * ya no cambia ninguna decisión.
  */
-export function healthPercent(healthFactor: number): number {
+function healthPercent(healthFactor: number): number {
   if (!Number.isFinite(healthFactor)) return 100
   return Math.min(100, Math.max(0, (healthFactor - 1) * 100))
 }

@@ -70,15 +70,14 @@ export function PositionPanel({
 
       <div className="mt-2 flex flex-wrap gap-1">
         {PRESETS.map((preset) => (
-          <button
+          <Button
             key={preset.label}
-            type="button"
             onClick={() => onChange(preset.strategy)}
             disabled={running}
-            className="raised btn font-mono px-2 py-1 text-[11px] disabled:text-(--chrome-shadow)"
+            className="font-mono px-2 py-1 text-[11px]"
           >
-            <span className="block">{preset.label}</span>
-          </button>
+            {preset.label}
+          </Button>
         ))}
       </div>
 
@@ -91,7 +90,7 @@ export function PositionPanel({
       <Button
         onClick={onAudit}
         disabled={running || sameAsset}
-        className="mt-4 w-full py-3 text-[14px] tracking-[0.2em]"
+        className="mt-4 w-full px-4 py-3 text-[14px] tracking-[0.2em]"
       >
         {running ? 'ATACANDO…' : 'ATACAME'}
       </Button>

@@ -2,10 +2,9 @@
 
 import type { AuditEvent, RecommendationView } from '@/lib/schemas/strategy'
 import { Window } from '@/components/win95/Window'
+import { usd } from '@/lib/format'
 
-const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
-
-export interface Breach {
+interface Breach {
   label: string
   thresholdLabel: string
   severity: number

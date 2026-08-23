@@ -2,12 +2,11 @@
 
 import type { AuditEvent } from '@/lib/schemas/strategy'
 import { Window, ProgressBar } from '@/components/win95/Window'
-
-const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))
+import { hf } from '@/lib/format'
 
 type Try = Extract<AuditEvent, { type: 'combinedTry' }>
 
-export interface CombinedView {
+interface CombinedView {
   started: boolean
   available: { id: string; label: string }[]
   tries: Try[]
@@ -58,7 +57,7 @@ export function CombinedAttack({ view }: { view: CombinedView }) {
         que sí, usando de cada uno menos de lo que haría falta para romperte solo.
       </p>
 
-      {!view.done && <ProgressBar value={null} />}
+      {!view.done && <ProgressBar />}
 
       <ol className="sunken font-mono mt-3 bg-(--field) p-2 text-[12px]">
         {view.tries.map((attempt, i) => (

@@ -13,11 +13,14 @@ const MAX_TRIES = 6
  * Qué tan por debajo de su umbral individual tiene que quedar cada componente.
  *
  * Es lo que hace difícil el problema: si el modelo puede meter un ataque que ya
- * liquida solo, no encontró nada —la combinación sobra—. Con el tope al 85% del
- * umbral, cada pieza es genuinamente insuficiente por su cuenta y la única
- * forma de ganar es que se sumen.
+ * liquida solo, no encontró nada —la combinación sobra—.
+ *
+ * El 60% no es arbitrario. Con el tope al 85% cada pieza quedaba tan cerca de
+ * alcanzar sola que casi cualquier mezcla liquidaba: medido contra un baseline
+ * que elige al azar, el azar también ganaba siempre. Un problema que se
+ * resuelve tirando los dados no demuestra nada sobre el modelo.
  */
-const SUBCRITICAL = 0.85
+const SUBCRITICAL = 0.6
 
 export interface Ingredient {
   vectorId: string

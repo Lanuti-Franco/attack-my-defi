@@ -1,10 +1,9 @@
 'use client'
 
 import type { AuditEvent } from '@/lib/schemas/strategy'
+import { hf } from '@/lib/format'
 
 type Attempt = Extract<AuditEvent, { type: 'attempt' }>
-
-const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))
 
 /**
  * El ida y vuelta entre el modelo y la cadena, paso por paso.

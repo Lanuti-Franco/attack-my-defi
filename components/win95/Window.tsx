@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 
-export type WindowTone = 'normal' | 'dead'
+type WindowTone = 'normal' | 'dead'
 
 /**
  * Una ventana del sistema: barra de título, botones de control y el marco
@@ -17,32 +17,22 @@ export function Window({
   title,
   icon,
   tone = 'normal',
-  active = true,
   opening = false,
-  shaking = false,
   className = '',
   children,
 }: {
   title: string
   icon?: string
   tone?: WindowTone
-  active?: boolean
   opening?: boolean
-  shaking?: boolean
   className?: string
   children: ReactNode
 }) {
   return (
-    <section
-      className={`raised flex flex-col p-1 ${opening ? 'window-open' : ''} ${shaking ? 'hit' : ''} ${className}`}
-    >
+    <section className={`raised flex flex-col p-1 ${opening ? 'window-open' : ''} ${className}`}>
       <header
         className="flex items-center gap-2 px-1 py-[3px]"
-        style={{
-          background: active
-            ? 'linear-gradient(90deg, var(--title-from), var(--title-to))'
-            : 'linear-gradient(90deg, var(--title-idle-from), var(--title-idle-to))',
-        }}
+        style={{ background: 'linear-gradient(90deg, var(--title-from), var(--title-to))' }}
       >
         {icon && (
           <span aria-hidden className="text-[13px] leading-none">
@@ -78,24 +68,17 @@ function ControlButton({ label }: { label: string }) {
 }
 
 /**
- * La barra de progreso segmentada del sistema.
+ * La barra de progreso del sistema, en su versión indeterminada: los bloques
+ * desfilan sin llegar a ningún lado.
  *
- * Cuando sabemos cuánto falta, avanza por bloques. Cuando no —el modelo está
- * pensando y todavía no probó nada—, los bloques desfilan sin llegar a ningún
- * lado, que es exactamente lo que el sistema hacía para decir "esperá".
+ * Es la única honesta acá. No sabemos cuántos sondeos va a necesitar el modelo
+ * hasta que termina, así que una barra que avanzara hasta un total sería una
+ * invención — y este proyecto se trata justamente de no inventar números.
  */
-export function ProgressBar({ value }: { value: number | null }) {
-  const seeking = value === null
+export function ProgressBar() {
   return (
-    <div className="sunken h-[18px] bg-(--field) p-[2px]">
-      <div
-        className={`progress-blocks h-full ${seeking ? 'progress-seeking' : ''}`}
-        style={{ width: seeking ? '100%' : `${Math.min(100, Math.max(0, value))}%` }}
-        role="progressbar"
-        aria-valuenow={seeking ? undefined : Math.round(value)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      />
+    <div className="sunken h-[18px] bg-(--field) p-[2px]" role="progressbar" aria-busy>
+      <div className="progress-blocks progress-seeking h-full w-full" />
     </div>
   )
 }
@@ -105,7 +88,7 @@ export function Button({
   onClick,
   disabled,
   children,
-  className = '',
+  className = 'px-4 py-2 text-[11px]',
 }: {
   onClick?: () => void
   disabled?: boolean
@@ -117,7 +100,7 @@ export function Button({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`raised btn font-chrome px-4 py-2 text-[11px] disabled:text-(--chrome-shadow) ${className}`}
+      className={`raised btn font-chrome disabled:text-(--chrome-shadow) ${className}`}
     >
       <span className="block">{children}</span>
     </button>

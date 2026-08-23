@@ -26,7 +26,7 @@ const STRATEGY: Strategy = {
 
 const RUNS = Number(process.argv[2] ?? 3)
 const BUDGET = 6
-const SUBCRITICAL = 0.85
+const SUBCRITICAL = 0.6
 
 /** Elige ataques e intensidades sin ningún criterio. El piso contra el que medir. */
 function randomCombination(all: KnownVector[]): Mutation[] {

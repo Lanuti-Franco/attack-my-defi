@@ -1,6 +1,6 @@
 'use client'
 
-export type AttackState = 'pending' | 'running' | 'survived' | 'breached'
+type AttackState = 'pending' | 'running' | 'survived' | 'breached'
 
 export interface QueueItem {
   id: string

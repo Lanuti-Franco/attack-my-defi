@@ -30,27 +30,18 @@ export const erc20Abi = parseAbi([
 export const wethAbi = parseAbi(['function deposit() payable'])
 
 /**
- * Estado de una posición tal como lo reporta Aave.
- * Los campos `*Usd` y `healthFactor` son conversiones de presentación;
- * los `*Raw` son los enteros exactos que devolvió el contrato.
+ * Estado de una posición tal como lo reporta Aave, ya convertido a números
+ * legibles. `getUserAccountData` devuelve más campos de los que hay acá; los
+ * que no se usan no se traen, para que nadie tenga que preguntarse cuál es el
+ * bueno cuando dos parezcan decir lo mismo.
  */
 export interface PositionState {
   collateralUsd: number
   debtUsd: number
-  availableBorrowsUsd: number
   /** Liquidation threshold en fracción (0.83), convertido desde bps */
   liquidationThreshold: number
-  ltv: number
   /** Infinity cuando no hay deuda (Aave devuelve max uint256) */
   healthFactor: number
-  raw: {
-    totalCollateralBase: bigint
-    totalDebtBase: bigint
-    availableBorrowsBase: bigint
-    currentLiquidationThreshold: bigint
-    ltv: bigint
-    healthFactor: bigint
-  }
 }
 
 const MAX_UINT256 = (1n << 256n) - 1n
@@ -64,33 +55,16 @@ export async function readPosition(user: Address): Promise<PositionState> {
     args: [user],
   })
 
-  const [
-    totalCollateralBase,
-    totalDebtBase,
-    availableBorrowsBase,
-    currentLiquidationThreshold,
-    ltv,
-    healthFactor,
-  ] = r
+  const [totalCollateralBase, totalDebtBase, , currentLiquidationThreshold, , healthFactor] = r
 
   return {
     collateralUsd: Number(formatUnits(totalCollateralBase, DECIMALS.base)),
     debtUsd: Number(formatUnits(totalDebtBase, DECIMALS.base)),
-    availableBorrowsUsd: Number(formatUnits(availableBorrowsBase, DECIMALS.base)),
     liquidationThreshold: Number(currentLiquidationThreshold) / 10_000,
-    ltv: Number(ltv) / 10_000,
     healthFactor:
       healthFactor === MAX_UINT256
         ? Infinity
         : Number(formatUnits(healthFactor, DECIMALS.healthFactor)),
-    raw: {
-      totalCollateralBase,
-      totalDebtBase,
-      availableBorrowsBase,
-      currentLiquidationThreshold,
-      ltv,
-      healthFactor,
-    },
   }
 }
 

@@ -1,15 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { AuditEvent, RecommendationView } from '@/lib/schemas/strategy'
 import { Window, ProgressBar } from '@/components/win95/Window'
 import { Verdict, breachesFrom } from '@/components/Verdict'
 import { AgentLoop } from '@/components/AgentLoop'
 import { AttackQueue, type QueueItem } from '@/components/AttackQueue'
 import { CombinedAttack, combinedFrom } from '@/components/CombinedAttack'
-
-const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
-const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))
+import { usd, hf } from '@/lib/format'
 
 /**
  * Cada ataque tiene su ícono de asedio: la catapulta pega de frente, el ariete
@@ -118,10 +116,6 @@ export function AuditReport({
   // El foco sigue al ataque en curso solo hasta que alguien elige otro: pisarle
   // la elección al que está leyendo un log es peor que no seguir nada.
   const [chosen, setChosen] = useState<string | null>(null)
-  const chosenRef = useRef<string | null>(null)
-  useEffect(() => {
-    chosenRef.current = chosen
-  }, [chosen])
 
   const focusedId = chosen ?? running?.id ?? vectors.find((v) => v.done)?.id ?? null
   const focused = vectors.find((v) => v.id === focusedId) ?? null
@@ -191,7 +185,7 @@ function Console({ run }: { run: VectorRun }) {
             </p>
           )}
 
-          {!run.done && <ProgressBar value={null} />}
+          {!run.done && <ProgressBar />}
 
           {run.attempts.length > 0 ? (
             <div className="mt-3">
@@ -222,7 +216,7 @@ function Waiting() {
     <Window title="Consola" icon="⚔️" className="min-h-[22rem]">
       <p className="font-mono text-[12px] text-(--ink-soft)">Montando la posición en el fork…</p>
       <div className="mt-3">
-        <ProgressBar value={null} />
+        <ProgressBar />
       </div>
     </Window>
   )

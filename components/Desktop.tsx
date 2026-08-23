@@ -10,8 +10,7 @@ import { Taskbar } from '@/components/win95/Taskbar'
 import { play, loadMutePreference, setMuted } from '@/lib/sound'
 import { MODEL_LABEL } from '@/lib/ai/modelName'
 import { DEFAULT_STRATEGY, type AuditEvent, type Strategy } from '@/lib/schemas/strategy'
-
-const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
+import { usd } from '@/lib/format'
 
 /** Qué se escucha cuando llega cada cosa. */
 function announce(event: AuditEvent): void {

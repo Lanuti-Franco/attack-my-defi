@@ -1,5 +1,5 @@
 import type { Address } from 'viem'
-import { ASSETS, ADDRESSES, type AssetSymbol } from '../chain/addresses'
+import { ASSETS, type AssetSymbol } from '../chain/addresses'
 import { readAssetPrice } from '../chain/aave'
 import { installMockFeed, setAssetPrice } from './oracle'
 import { testClient } from '../chain/client'
@@ -28,24 +28,6 @@ export type Mutation =
 
 export function assetAddress(asset: AssetSymbol): Address {
   return ASSETS[asset].address
-}
-
-/** Descripción legible, para el feed del ataque en la UI. */
-export function describeMutation(m: Mutation): string {
-  switch (m.type) {
-    case 'priceShock':
-      return `${m.asset} ${m.pct > 0 ? '+' : ''}${m.pct}%`
-    case 'priceSet':
-      return `${m.asset} a $${m.usd}`
-    case 'advanceTime':
-      return `+${Math.round(m.days)} días`
-    case 'lowerThreshold':
-      return `LT de ${m.asset} −${m.points.toFixed(1)} pts`
-    case 'drainLiquidity':
-      return `se va el ${m.pct.toFixed(0)}% de la liquidez`
-    case 'marketSale':
-      return `liquidan ${Math.round(m.amount)} ${m.asset}`
-  }
 }
 
 /** Aplica una mutación sobre el fork. Idempotente respecto del snapshot base. */

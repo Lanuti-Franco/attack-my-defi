@@ -5,19 +5,16 @@ import { buildPosition, type StrategySpec } from './position'
 import {
   applyMutation,
   captureBasePrices,
-  describeMutation,
   resetBasePrices,
   type Mutation,
 } from './mutations'
 import { forgetInstalledFeeds } from './oracle'
 import { resetFork } from '../chain/reset'
-import { acquireForkLock, releaseForkLock } from './forkLock'
+import { acquireForkLock } from './forkLock'
 
 export type Verdict = 'SURVIVED' | 'LIQUIDATABLE'
 
 export interface ScenarioResult {
-  mutations: Mutation[]
-  description: string
   state: PositionState
   verdict: Verdict
 }
@@ -35,14 +32,14 @@ export function verdictOf(healthFactor: number): Verdict {
 export class ScenarioEngine {
   private baseSnapshot: `0x${string}` | null = null
   private user: Address | null = null
-  private spec: StrategySpec | null = null
   /** Snapshot del mundo limpio, mientras haya una preparación activa. */
   private pristineSnapshot: `0x${string}` | null = null
 
   async setup(spec: StrategySpec): Promise<PositionState> {
     await assertForkAlive()
-    acquireForkLock(`${spec.collateral.amount} ${spec.collateral.asset} / ${spec.debt.amount} ${spec.debt.asset}`)
-    this.spec = spec
+    acquireForkLock(
+      `${spec.collateral.amount} ${spec.collateral.asset} / ${spec.debt.amount} ${spec.debt.asset}`,
+    )
 
     // Volver el fork al bloque pineado antes de construir nada. Sin esto, dos
     // corridas seguidas acumulan colateral y los números dejan de ser
@@ -117,12 +114,7 @@ export class ScenarioEngine {
       for (const m of mutations) await applyMutation(m)
       const state = await readPosition(this.user!)
 
-      return {
-        mutations,
-        description: mutations.map(describeMutation).join(' · '),
-        state,
-        verdict: verdictOf(state.healthFactor),
-      }
+      return { state, verdict: verdictOf(state.healthFactor) }
     } finally {
       await this.revertToBase()
     }

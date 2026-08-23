@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const assetSchema = z.enum(['WETH', 'USDC', 'WBTC'])
+const assetSchema = z.enum(['WETH', 'USDC', 'WBTC'])
 
 const legSchema = z.object({
   asset: assetSchema,
@@ -118,7 +118,7 @@ export type AuditEvent =
   | { type: 'combinedStart'; available: { id: string; label: string }[] }
   | {
       type: 'combinedTry'
-      ingredients: { vectorId: string; label: string; shown: string }[]
+      ingredients: { vectorId: string; shown: string }[]
       healthFactor: number
       liquidated: boolean
       rationale: string
