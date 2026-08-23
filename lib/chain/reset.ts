@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, rmSync } from 'node:fs'
-import { publicClient, testClient } from './client'
+import { account, publicClient, testClient } from './client'
+import { readPosition } from './aave'
 import { safeMessage } from './redact'
 
 /**
@@ -31,6 +32,18 @@ function forgetPristine(): void {
   } catch {
     // No estaba: no hay nada que olvidar.
   }
+}
+
+/**
+ * ¿La cuenta de pruebas está sin posición?
+ *
+ * Es la única señal que distingue un mundo recién forkeado de uno donde ya
+ * corrimos algo. El bloque no alcanza: revertir a un snapshot restaura el
+ * estado sin mover el número de bloque.
+ */
+async function worldIsClean(): Promise<boolean> {
+  const { collateralUsd, debtUsd } = await readPosition(account.address)
+  return collateralUsd < 1 && debtUsd < 1
 }
 
 /**
@@ -91,10 +104,19 @@ export async function resetFork(): Promise<void> {
     } as never)) as unknown as boolean
 
     if (reverted === true) {
-      // Anvil consume el snapshot al revertir: hay que dejar otro anotado para
-      // la corrida siguiente.
-      rememberPristine(await testClient.snapshot())
-      return
+      // Volver no alcanza: hay que comprobar a dónde se volvió.
+      //
+      // Un snapshot tomado sobre un mundo que ya tenía una posición montada
+      // deja a todas las corridas partiendo de ahí, acumulando deuda. Lo peor
+      // es que no falla: devuelve umbrales plausibles y equivocados, que es el
+      // único error que este proyecto no se puede permitir.
+      if (await worldIsClean()) {
+        // Anvil consume el snapshot al revertir: hay que dejar otro anotado
+        // para la corrida siguiente.
+        rememberPristine(await testClient.snapshot())
+        return
+      }
+      forgetPristine()
     }
 
     // El snapshot no existe: Anvil se reinició debajo nuestro y la anotación
@@ -111,7 +133,7 @@ export async function resetFork(): Promise<void> {
   // Que el bloque no haya avanzado alcanza para saberlo: Anvil mina cada
   // transacción, así que cualquier cosa que hayamos escrito lo movió.
   const currentBlock = await publicClient.getBlockNumber()
-  if (currentBlock === BigInt(process.env.PINNED_BLOCK ?? -1)) {
+  if (currentBlock === BigInt(process.env.PINNED_BLOCK ?? -1) && (await worldIsClean())) {
     rememberPristine(await testClient.snapshot())
     return
   }

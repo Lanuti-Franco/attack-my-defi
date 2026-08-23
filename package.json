@@ -10,7 +10,8 @@
     "warm": "tsx --env-file=.env.local scripts/warm-fork.ts",
     "evidence": "tsx --env-file=.env.local scripts/evidence.ts",
     "impact-curve": "tsx --env-file=.env.local scripts/measure-impact-curve.ts",
-    "curve-check": "tsx --env-file=.env.local scripts/curve-check.ts"
+    "curve-check": "tsx --env-file=.env.local scripts/curve-check.ts",
+    "combined-check": "tsx --env-file=.env.local scripts/combined-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.116.0",

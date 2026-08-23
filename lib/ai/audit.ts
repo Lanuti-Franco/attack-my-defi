@@ -3,6 +3,7 @@ import { releaseForkLock } from '../simulation/forkLock'
 import { vectorsFor, type AttackVector } from './vectors'
 import { ensureModel } from './localModel'
 import { severity, searchThreshold } from './liquidator'
+import { searchCombination, type KnownVector } from './combined'
 import { RISK_PROFILES, recommendFor, type Recommendation } from '../simulation/riskProfiles'
 import type { Strategy, AuditEvent, RecommendationView } from '../schemas/strategy'
 
@@ -54,6 +55,7 @@ async function* audit(
 
   const modelId = opts.modelId ?? (await ensureModel())
   const vectors = vectorsFor(opts.strategy)
+  const thresholds = new Map<string, number | null>()
 
   yield {
     type: 'auditStart',
@@ -94,7 +96,13 @@ async function* audit(
       severity: outcome.threshold === null ? null : severity(outcome.threshold, vector),
       survivedMessage: vector.survivedMessage,
     }
+
+    thresholds.set(vector.id, outcome.threshold)
   }
+
+  // El combinado va último a propósito: necesita saber cuánto aguantó cada
+  // ataque por separado para poder pedir intensidades que solas no alcancen.
+  yield* combinedPhase(engine, vectors, thresholds, modelId)
 
   // Las recomendaciones se despejan de la fórmula y después se verifican
   // simulando la posición ajustada: el número que se muestra tiene que
@@ -159,5 +167,52 @@ async function verifyRecommendation(
     // Se deja el motor como estaba para que el resto del informe siga midiendo
     // la posición que el usuario describió.
     await engine.setup(strategy)
+  }
+}
+
+/**
+ * El ataque combinado, como fase final de la auditoría.
+ *
+ * Sólo tiene sentido si algo quedó en pie: si un ataque suelto ya liquidó la
+ * posición, mezclar no agrega nada que el usuario no sepa.
+ */
+async function* combinedPhase(
+  engine: ScenarioEngine,
+  vectors: AttackVector[],
+  thresholds: Map<string, number | null>,
+  modelId: string,
+): AsyncGenerator<AuditEvent> {
+  const known: KnownVector[] = vectors
+    .filter((v) => !v.prepare)
+    .map((vector) => ({ vector, threshold: thresholds.get(vector.id) ?? null }))
+
+  if (known.length < 2) return
+
+  yield {
+    type: 'combinedStart',
+    available: known.map((k) => ({ id: k.vector.id, label: k.vector.label })),
+  }
+
+  const search = searchCombination({ engine, known, modelId })
+  let step = await search.next()
+  while (!step.done) {
+    const attempt = step.value
+    yield {
+      type: 'combinedTry',
+      ingredients: attempt.ingredients.map((ing) => {
+        const vector = known.find((k) => k.vector.id === ing.vectorId)!.vector
+        return { vectorId: ing.vectorId, label: ing.label, shown: vector.format(ing.intensity) }
+      }),
+      healthFactor: attempt.healthFactor,
+      liquidated: attempt.liquidated,
+      rationale: attempt.rationale,
+    }
+    step = await search.next()
+  }
+
+  yield {
+    type: 'combinedDone',
+    liquidated: step.value.winner !== null,
+    failure: step.value.failure,
   }
 }

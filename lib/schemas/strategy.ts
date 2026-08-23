@@ -108,6 +108,22 @@ export type AuditEvent =
       /** Qué significa que este vector no haya llegado a liquidar la posición. */
       survivedMessage: string
     }
+  /**
+   * El ataque combinado: el modelo mezcla ataques que por separado no alcanzan.
+   *
+   * Va aparte de los demás porque no busca un umbral —no hay un solo número que
+   * encontrar— sino una mezcla que funcione, y porque es el único lugar donde
+   * el modelo hace algo que el código no podría hacer igual de bien.
+   */
+  | { type: 'combinedStart'; available: { id: string; label: string }[] }
+  | {
+      type: 'combinedTry'
+      ingredients: { vectorId: string; label: string; shown: string }[]
+      healthFactor: number
+      liquidated: boolean
+      rationale: string
+    }
+  | { type: 'combinedDone'; liquidated: boolean; failure?: string }
   | { type: 'recommendations'; recommendations: RecommendationView[] }
 
 /** Recomendación tal como viaja al navegador (sin funciones). */

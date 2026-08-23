@@ -31,6 +31,22 @@ async function main() {
         console.log(`   → ${ev.thresholdLabel ?? 'no la liquida'}  (${ev.steps} sims)\n`)
         thresholds.push(`${ev.label}: ${ev.thresholdLabel ?? '—'}`)
         break
+      case 'combinedStart':
+        console.log(`\n── Ataque combinado (${ev.available.length} ataques disponibles)`)
+        break
+      case 'combinedTry':
+        console.log(
+          `     ${ev.ingredients.map((i) => i.shown).join(' + ')}  `.padEnd(60) +
+            `HF ${ev.healthFactor.toFixed(4)}  ${ev.liquidated ? 'LIQUIDATABLE' : 'SURVIVED'}`,
+        )
+        break
+      case 'combinedDone':
+        console.log(
+          ev.failure
+            ? `   → se cortó: ${ev.failure}`
+            : `   → ${ev.liquidated ? 'encontró una mezcla letal' : 'ninguna mezcla liquidó'}`,
+        )
+        break
       case 'recommendations':
         console.log('\n═══ RECOMENDACIONES ═══')
         for (const r of ev.recommendations) {

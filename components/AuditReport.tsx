@@ -6,6 +6,7 @@ import { Window, ProgressBar } from '@/components/win95/Window'
 import { Verdict, breachesFrom } from '@/components/Verdict'
 import { AgentLoop } from '@/components/AgentLoop'
 import { AttackQueue, type QueueItem } from '@/components/AttackQueue'
+import { CombinedAttack, combinedFrom } from '@/components/CombinedAttack'
 
 const usd = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
 const hf = (n: number) => (n === Infinity ? '∞' : n.toFixed(4))
@@ -110,6 +111,7 @@ export function AuditReport({
 }) {
   const { position, vectors, recommendations, errors } = build(events)
 
+  const combined = combinedFrom(events)
   const running = vectors.find((v) => v.started && !v.done)
   const finished = recommendations.length > 0
 
@@ -142,6 +144,8 @@ export function AuditReport({
           forkBlock={forkBlock}
         />
       )}
+
+      {combined && <CombinedAttack view={combined} />}
 
       {vectors.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
