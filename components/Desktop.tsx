@@ -106,10 +106,11 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
 
             {/* Que la inferencia sea local es el punto entero del proyecto, así
                 que va donde se lee sin abrir nada. */}
-            <p className="sunken font-mono bg-(--field) px-2 py-[6px] text-[11px]">
-              <span className="text-(--ink-soft)">model</span> {MODEL_LABEL} ·{' '}
-              <span className="text-(--ink-soft)">runs on</span> this machine, via QVAC ·{' '}
-              <span className="text-(--ink-soft)">external API calls</span> none
+            <p className="sunken font-mono bg-(--field) px-2 py-[6px] text-[11px] leading-relaxed">
+              {MODEL_LABEL}
+              <span className="block text-(--ink-soft)">
+                Every scenario is chosen on this machine, via QVAC
+              </span>
             </p>
 
             {/* La barra se muestra desde el arranque, aunque todavía no haya

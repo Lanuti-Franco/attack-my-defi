@@ -116,7 +116,7 @@ them breaks you. All four together do.
 ## Local inference
 
 All inference runs through [QVAC](https://qvac.tether.io) on a quantized **Qwen3 4B
-Instruct**. No API keys, no data leaving the machine, and after the first download it works
+Instruct** — four billion parameters, on your laptop. No API keys, no data leaving the machine, and after the first download it works
 without internet except for the fork's RPC.
 
 Getting a 4B model to use tools reliably was the real work of this project:

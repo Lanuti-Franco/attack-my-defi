@@ -6,4 +6,4 @@
  *
  * Si cambia `MODEL_SRC`, esto tiene que cambiar con él.
  */
-export const MODEL_LABEL = 'Qwen3-4B-Instruct · Q4_K_M'
+export const MODEL_LABEL = 'Qwen3 · 4B params · Q4_K_M'
