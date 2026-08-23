@@ -24,7 +24,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={`${silkscreen.variable} ${plexMono.variable} h-full`}>
+    // Las extensiones del navegador inyectan atributos en <html> antes de que
+    // React hidrate, y eso dispara un error de hidratación que no es nuestro.
+    // Suprimirlo acá no tapa nada de la app: sólo afecta a este elemento.
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${silkscreen.variable} ${plexMono.variable} h-full`}
+    >
       <body className="min-h-full">{children}</body>
     </html>
   )
