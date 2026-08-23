@@ -98,9 +98,10 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div>
             <p className="font-mono mb-2 text-[12px] leading-relaxed">
-              Seven different attacks against your Aave position, and what you would have to do
-              to survive them. The model picks which scenario to try; the numbers come back from
-              the Aave contract, on a fork of Ethereum mainnet.
+              Every attack that applies to your Aave position, and what you would have to do to
+              survive them — which ones apply depends on what you hold. The model picks which
+              scenario to try; the numbers come back from the Aave contract, on a fork of
+              Ethereum mainnet.
             </p>
 
             {/* Que la inferencia sea local es el punto entero del proyecto, así
@@ -111,22 +112,33 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
               <span className="text-(--ink-soft)">external API calls</span> none
             </p>
 
-            {position && (
-              <div className="mt-3">
-                <HealthBar
-                  healthFactor={position.healthFactor}
-                  label="Position resistance"
+            {/* La barra se muestra desde el arranque, aunque todavía no haya
+                nada que medir: así el panel no salta cuando llegan los datos, y
+                se entiende qué es lo que va a moverse. */}
+            <div className="mt-3">
+              <HealthBar
+                healthFactor={position ? position.healthFactor : null}
+                label="Position resistance"
+              />
+              <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
+                <Stat
+                  label="Collateral"
+                  value={position ? usd(position.collateralUsd) : '—'}
                 />
-                <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
-                  <Stat label="Collateral" value={usd(position.collateralUsd)} />
-                  <Stat label="Debt" value={usd(position.debtUsd)} />
-                  <Stat
-                    label="Liquidation threshold"
-                    value={`${(position.liquidationThreshold * 100).toFixed(0)}%`}
-                  />
-                </dl>
-              </div>
-            )}
+                <Stat label="Debt" value={position ? usd(position.debtUsd) : '—'} />
+                <Stat
+                  label="Liquidation threshold"
+                  value={
+                    position ? `${(position.liquidationThreshold * 100).toFixed(0)}%` : '—'
+                  }
+                />
+              </dl>
+              {!position && (
+                <p className="font-mono mt-2 text-[11px] text-(--ink-soft)">
+                  Nothing measured yet. Hit Attack me and this bar drops as each attack lands.
+                </p>
+              )}
+            </div>
           </div>
 
           <PositionPanel
@@ -158,10 +170,16 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+  const empty = value === '—'
   return (
     <div>
       <dt className="font-chrome text-[9px] text-(--ink-soft)">{label}</dt>
-      <dd className="font-mono text-[14px] font-semibold tabular-nums">{value}</dd>
+      <dd
+        className="font-mono text-[14px] font-semibold tabular-nums"
+        style={empty ? { color: 'var(--chrome-shadow)' } : undefined}
+      >
+        {value}
+      </dd>
     </div>
   )
 }

@@ -19,7 +19,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Attack My DeFi',
   description:
-    'Seven attacks against your Aave V3 position, simulated on a fork of Ethereum mainnet. The model never makes up a number.',
+    'Attacks your Aave V3 position on a fork of Ethereum mainnet until it finds what liquidates it. The model never makes up a number.',
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

@@ -2,13 +2,13 @@
 
 import type { AuditEvent } from '@/lib/schemas/strategy'
 import { Window, ProgressBar } from '@/components/win95/Window'
-import { hf } from '@/lib/format'
+import { ChainAnswer } from '@/components/ChainAnswer'
+import { withoutNumbers } from '@/lib/ai/rationale'
 
 type Try = Extract<AuditEvent, { type: 'combinedTry' }>
 
 interface CombinedView {
   started: boolean
-  available: { id: string; label: string }[]
   tries: Try[]
   done: boolean
   liquidated: boolean
@@ -17,19 +17,10 @@ interface CombinedView {
 
 /** Junta del stream lo que hace falta para mostrar el ataque combinado. */
 export function combinedFrom(events: AuditEvent[]): CombinedView | null {
-  const view: CombinedView = {
-    started: false,
-    available: [],
-    tries: [],
-    done: false,
-    liquidated: false,
-  }
+  const view: CombinedView = { started: false, tries: [], done: false, liquidated: false }
 
   for (const ev of events) {
-    if (ev.type === 'combinedStart') {
-      view.started = true
-      view.available = ev.available
-    }
+    if (ev.type === 'combinedStart') view.started = true
     if (ev.type === 'combinedTry') view.tries.push(ev)
     if (ev.type === 'combinedDone') {
       view.done = true
@@ -68,16 +59,13 @@ export function CombinedAttack({ view }: { view: CombinedView }) {
                 {attempt.ingredients.map((ing) => ing.shown).join('  +  ')}
               </span>
             </div>
-            <div className="mt-[2px] flex items-baseline gap-2 pl-6">
-              <span className="font-chrome text-[9px] text-(--ink-soft)">Aave</span>
-              <span className="tabular-nums">HF {hf(attempt.healthFactor)}</span>
-              <span
-                className="font-semibold"
-                style={{ color: attempt.liquidated ? 'var(--hp-low)' : 'var(--hp-high)' }}
-              >
-                {attempt.liquidated ? '☠ liquidates' : '🛡 holds'}
-              </span>
-            </div>
+            {attempt.rationale && (
+              <p className="mt-[2px] pl-6 text-[11px] leading-snug text-(--ink-soft)">
+                “{withoutNumbers(attempt.rationale)}”
+              </p>
+            )}
+
+            <ChainAnswer healthFactor={attempt.healthFactor} liquidated={attempt.liquidated} />
           </li>
         ))}
 

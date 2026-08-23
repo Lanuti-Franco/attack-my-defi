@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 type WindowTone = 'normal' | 'dead'
 
@@ -8,10 +8,14 @@ type WindowTone = 'normal' | 'dead'
  * Una ventana del sistema: barra de título, botones de control y el marco
  * hundido donde vive el contenido.
  *
- * Los botones de control no hacen nada y están puestos igual. Son parte de lo
- * que hace reconocible a una ventana; sacarlos por ser decorativos deja algo
- * que ya no se lee como una ventana. Van marcados como decorativos para que
- * un lector de pantalla no los ofrezca como si fueran acciones.
+ * El botón de minimizar funciona: colapsa la ventana a su barra de título. Con
+ * la auditoría entera desplegada la página se hace larga, y poder plegar lo que
+ * ya se leyó es exactamente para lo que servía ese botón.
+ *
+ * Los otros dos no hacen nada y están puestos igual: son parte de lo que hace
+ * reconocible a una ventana, y sacarlos por decorativos deja algo que ya no se
+ * lee como una ventana. Van marcados como tales para que un lector de pantalla
+ * no los ofrezca como acciones.
  */
 export function Window({
   title,
@@ -19,6 +23,7 @@ export function Window({
   tone = 'normal',
   opening = false,
   className = '',
+  startCollapsed = false,
   children,
 }: {
   title: string
@@ -26,10 +31,16 @@ export function Window({
   tone?: WindowTone
   opening?: boolean
   className?: string
+  /** Para lo que es material de consulta y no hace falta tener abierto. */
+  startCollapsed?: boolean
   children: ReactNode
 }) {
+  const [collapsed, setCollapsed] = useState(startCollapsed)
+
   return (
-    <section className={`raised flex flex-col p-1 ${opening ? 'window-open' : ''} ${className}`}>
+    <section
+      className={`raised flex flex-col p-1 ${opening ? 'window-open' : ''} ${collapsed ? '' : className}`}
+    >
       <header
         className="flex items-center gap-2 px-1 py-[3px]"
         style={{ background: 'linear-gradient(90deg, var(--title-from), var(--title-to))' }}
@@ -42,19 +53,31 @@ export function Window({
         <h2 className="font-chrome truncate text-[11px] leading-none text-(--title-text)">
           {title}
         </h2>
-        <div aria-hidden className="ml-auto flex gap-[2px]">
-          <ControlButton label="_" />
-          <ControlButton label="□" />
-          <ControlButton label="✕" />
+        <div className="ml-auto flex gap-[2px]">
+          <button
+            type="button"
+            onClick={() => setCollapsed((was) => !was)}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+            className="raised btn font-chrome flex h-[15px] w-[16px] items-center justify-center pt-[1px] text-[8px] leading-none"
+          >
+            <span className="block">{collapsed ? '□' : '_'}</span>
+          </button>
+          <span aria-hidden className="flex gap-[2px]">
+            <ControlButton label="□" />
+            <ControlButton label="✕" />
+          </span>
         </div>
       </header>
 
-      <div
-        className={tone === 'dead' ? 'flex-1 bg-(--bsod) p-4' : 'flex-1 p-3'}
-        style={tone === 'dead' ? undefined : { background: 'var(--chrome)' }}
-      >
-        {children}
-      </div>
+      {!collapsed && (
+        <div
+          className={tone === 'dead' ? 'flex-1 bg-(--bsod) p-4' : 'flex-1 p-3'}
+          style={tone === 'dead' ? undefined : { background: 'var(--chrome)' }}
+        >
+          {children}
+        </div>
+      )}
     </section>
   )
 }

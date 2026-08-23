@@ -25,7 +25,7 @@ const WHALE_COLLATERAL_WETH = 400_000
  * que quiere vaciar y el escenario mediría exactamente lo contrario de lo que
  * dice medir.
  */
-export function canDrain(asset: AssetSymbol): boolean {
+function canDrain(asset: AssetSymbol): boolean {
   return asset !== 'WETH'
 }
 

@@ -78,7 +78,7 @@ const ENTRIES: { question: string; answer: ReactNode }[] = [
 
 export function Faq() {
   return (
-    <Window title="Help — How this works" icon="❓">
+    <Window title="Help — How this works" icon="❓" startCollapsed>
       <div className="flex flex-col gap-[2px]">
         {ENTRIES.map(({ question, answer }) => (
           <details key={question} className="sunken bg-(--field)">

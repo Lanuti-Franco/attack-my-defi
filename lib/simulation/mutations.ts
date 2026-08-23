@@ -26,7 +26,7 @@ export type Mutation =
   /** Alguien liquida y vende ese colateral al mercado, hundiendo el precio */
   | { type: 'marketSale'; asset: AssetSymbol; amount: number }
 
-export function assetAddress(asset: AssetSymbol): Address {
+function assetAddress(asset: AssetSymbol): Address {
   return ASSETS[asset].address
 }
 

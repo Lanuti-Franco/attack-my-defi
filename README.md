@@ -1,7 +1,7 @@
 # Attack My DeFi
 
-You pick a lending position on Aave V3 and seven different attacks look for the mildest
-scenario that liquidates it. Every health factor you see comes back from the Aave contract, on
+You pick a lending position on Aave V3 and a battery of attacks looks for the mildest scenario
+that liquidates it — six of them one at a time, plus one that combines them. Every health factor you see comes back from the Aave contract, on
 a fork of Ethereum mainnet, and the model that chooses the scenarios runs entirely on your
 machine.
 
@@ -63,8 +63,10 @@ entirely unrelated.
 
 ### The six individual attacks
 
-Which ones apply depends on the position: there is no point looking for a depeg against
-someone who holds no stablecoin as collateral.
+Which ones apply depends on the position, and never all six at once: there is no point looking
+for a depeg against someone who holds no stablecoin, and a WETH liquidation cascade only drags
+down a position collateralised in WETH. Those two are mutually exclusive, so a given position
+faces at most five individual attacks, plus the combined one.
 
 - **Collateral crash** — the price Aave uses for your collateral drops, whether the market fell
   or the feed failed. When the collateral is a stablecoin the attack flips around and targets
@@ -83,7 +85,7 @@ someone who holds no stablecoin as collateral.
   market, and the price drags you down. Capped at 25,000 WETH, around 60 million dollars sold
   at once: more than Aave liquidated in all of March 2020.
 
-### The seventh: the combined attack
+### And one more: the combined attack
 
 The six above are found by bisection, and it is worth saying before someone else does: **the
 model does not add much there**. Given the interval where the threshold lies, the next value

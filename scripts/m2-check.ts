@@ -34,9 +34,6 @@ async function main() {
         )
         console.log(`shock crítico según la fórmula: ${analytic.toFixed(2)}%\n`)
         break
-      case 'thinking':
-        console.log(`🤖 ${ev.text}`)
-        break
       case 'attempt':
         attempts++
         console.log(

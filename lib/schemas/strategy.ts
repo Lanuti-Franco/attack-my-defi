@@ -34,7 +34,6 @@ export type AttackEvent =
       healthFactor: number
       liquidationThreshold: number
     }
-  | { type: 'thinking'; text: string }
   | {
       type: 'attempt'
       /** El escenario ya formateado por el vector: "ETH -25.0%", "USDC a $1.150". */
@@ -136,7 +135,6 @@ export type AuditEvent =
 
 /** Recomendación tal como viaja al navegador (sin funciones). */
 export interface RecommendationView {
-  profileId: string
   profileLabel: string
   benchmark: string
   maxDebtUsd: number

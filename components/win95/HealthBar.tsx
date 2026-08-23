@@ -20,22 +20,32 @@ function toneOf(percent: number): string {
   return 'var(--hp-low)'
 }
 
+/**
+ * `healthFactor` es null hasta que hay una posición montada.
+ *
+ * La barra se dibuja igual, vacía: ocupa su lugar desde el arranque y deja ver
+ * que ahí va a pasar algo, en vez de aparecer de golpe y correr todo lo demás.
+ */
 export function HealthBar({
   healthFactor,
   label = 'Resistance',
 }: {
-  healthFactor: number
+  healthFactor: number | null
   label?: string
 }) {
-  const percent = healthPercent(healthFactor)
-  const dead = healthFactor < 1
-  const shown = Number.isFinite(healthFactor) ? healthFactor.toFixed(4) : '∞'
+  const empty = healthFactor === null
+  const percent = empty ? 0 : healthPercent(healthFactor)
+  const dead = !empty && healthFactor < 1
+  const shown = empty ? '—' : Number.isFinite(healthFactor) ? healthFactor.toFixed(4) : '∞'
 
   return (
     <div>
       <div className="font-chrome mb-1 flex items-baseline justify-between text-[10px]">
         <span>{label}</span>
-        <span className="font-mono text-[12px] font-semibold tabular-nums">
+        <span
+          className="font-mono text-[12px] font-semibold tabular-nums"
+          style={empty ? { color: 'var(--chrome-shadow)' } : undefined}
+        >
           {dead ? 'LIQUIDATED' : `HF ${shown}`}
         </span>
       </div>
@@ -45,10 +55,10 @@ export function HealthBar({
           className="h-full transition-[width] duration-500 ease-out"
           style={{ width: `${percent}%`, background: toneOf(percent) }}
           role="meter"
-          aria-valuenow={Math.round(percent)}
+          aria-valuenow={empty ? undefined : Math.round(percent)}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Health factor ${shown}`}
+          aria-label={empty ? 'Health factor not measured yet' : `Health factor ${shown}`}
         />
       </div>
 

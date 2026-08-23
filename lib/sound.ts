@@ -1,69 +1,28 @@
 'use client'
 
 /**
- * Los sonidos del sistema, sintetizados en el navegador.
+ * Los sonidos del asedio, sintetizados en el navegador.
  *
- * Ni un archivo de audio: cada sonido son un par de osciladores cuadrados, que
- * es literalmente cómo sonaba una PC de la época. Además de pesar cero, evita
- * el problema obvio de agarrar los samples de un juego que no es nuestro.
+ * Ni un archivo de audio: además de pesar cero, evita el problema obvio de
+ * agarrar los samples de un juego que no es nuestro.
+ *
+ * Lo que los hace sonar a impacto y no a beep es el ruido filtrado. Un tono
+ * puro suena a PC vieja; un golpe real es un estallido de ruido que se apaga
+ * rápido, con un poco de cuerpo grave abajo. Cada golpe de acá es esas dos
+ * cosas sumadas.
  *
  * El navegador no deja sonar nada hasta que la persona interactúa con la
- * página, y eso acá juega a favor: el primer sonido es el click en Atacame.
+ * página, y eso acá juega a favor: el primer sonido es el click en Attack me.
  */
-export type Cue = 'click' | 'open' | 'hit' | 'defeat' | 'survive' | 'done'
-
-interface Note {
-  freq: number
-  /** Segundos desde que arranca el sonido. */
-  at: number
-  duration: number
-  /** Cuadrada suena a PC vieja; triangular es más suave, para los chimes. */
-  wave?: OscillatorType
-  gain?: number
-  /** Frecuencia final, si el tono se desliza. */
-  slideTo?: number
-}
-
-const CUES: Record<Cue, Note[]> = {
-  // El clack seco de un botón físico.
-  click: [{ freq: 900, at: 0, duration: 0.03, gain: 0.16 }],
-
-  // Dos tonos que suben: algo apareció.
-  open: [
-    { freq: 660, at: 0, duration: 0.05, gain: 0.12 },
-    { freq: 990, at: 0.05, duration: 0.06, gain: 0.12 },
-  ],
-
-  // El impacto del asedio: grave y cayendo.
-  hit: [{ freq: 160, at: 0, duration: 0.16, slideTo: 55, gain: 0.22 }],
-
-  // La posición cayó. Tres golpes graves, el último se desploma.
-  defeat: [
-    { freq: 220, at: 0, duration: 0.12, gain: 0.2 },
-    { freq: 165, at: 0.14, duration: 0.12, gain: 0.2 },
-    { freq: 110, at: 0.28, duration: 0.5, slideTo: 40, gain: 0.24 },
-  ],
-
-  // Aguantó: dos notas cortas y limpias.
-  survive: [
-    { freq: 880, at: 0, duration: 0.06, wave: 'triangle', gain: 0.14 },
-    { freq: 1320, at: 0.07, duration: 0.1, wave: 'triangle', gain: 0.14 },
-  ],
-
-  // El informe está listo.
-  done: [
-    { freq: 660, at: 0, duration: 0.08, wave: 'triangle', gain: 0.14 },
-    { freq: 880, at: 0.09, duration: 0.08, wave: 'triangle', gain: 0.14 },
-    { freq: 1320, at: 0.18, duration: 0.22, wave: 'triangle', gain: 0.14 },
-  ],
-}
+type Cue = 'click' | 'open' | 'hit' | 'defeat' | 'survive' | 'done'
 
 const MUTE_KEY = 'attack-my-defi.muted'
 
 let context: AudioContext | null = null
 let muted = false
+/** El ruido se genera una vez y se reusa: llenarlo por golpe es tirar CPU. */
+let noise: AudioBuffer | null = null
 
-/** Lee la preferencia guardada. El almacenamiento puede fallar y no importa. */
 export function loadMutePreference(): boolean {
   try {
     muted = window.localStorage.getItem(MUTE_KEY) === '1'
@@ -85,13 +44,118 @@ export function setMuted(next: boolean): void {
 function audioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
   if (!context) {
-    const Ctor = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    const Ctor =
+      window.AudioContext ??
+      (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!Ctor) return null
     context = new Ctor()
   }
-  // Los navegadores dejan el contexto suspendido hasta el primer gesto.
   if (context.state === 'suspended') void context.resume()
   return context
+}
+
+function noiseBuffer(ctx: AudioContext): AudioBuffer {
+  if (!noise) {
+    const frames = ctx.sampleRate * 2
+    noise = ctx.createBuffer(1, frames, ctx.sampleRate)
+    const data = noise.getChannelData(0)
+    for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1
+  }
+  return noise
+}
+
+/**
+ * El estallido de un impacto: ruido pasado por un filtro que se cierra.
+ *
+ * El filtro bajando de agudo a grave es lo que da la sensación de algo pesado
+ * golpeando algo pesado, en vez de un siseo.
+ */
+function thud(
+  ctx: AudioContext,
+  at: number,
+  opts: { duration: number; from: number; to: number; gain: number },
+): void {
+  const source = ctx.createBufferSource()
+  source.buffer = noiseBuffer(ctx)
+
+  const filter = ctx.createBiquadFilter()
+  filter.type = 'lowpass'
+  filter.frequency.setValueAtTime(opts.from, at)
+  filter.frequency.exponentialRampToValueAtTime(opts.to, at + opts.duration)
+
+  const amp = ctx.createGain()
+  amp.gain.setValueAtTime(opts.gain, at)
+  amp.gain.exponentialRampToValueAtTime(0.0001, at + opts.duration)
+
+  source.connect(filter).connect(amp).connect(ctx.destination)
+  source.start(at)
+  source.stop(at + opts.duration)
+}
+
+/** El cuerpo grave que va debajo del estallido, o un tono suelto. */
+function tone(
+  ctx: AudioContext,
+  at: number,
+  opts: { freq: number; duration: number; gain: number; slideTo?: number; wave?: OscillatorType },
+): void {
+  const osc = ctx.createOscillator()
+  osc.type = opts.wave ?? 'sine'
+  osc.frequency.setValueAtTime(opts.freq, at)
+  if (opts.slideTo) osc.frequency.exponentialRampToValueAtTime(opts.slideTo, at + opts.duration)
+
+  const amp = ctx.createGain()
+  amp.gain.setValueAtTime(opts.gain, at)
+  amp.gain.exponentialRampToValueAtTime(0.0001, at + opts.duration)
+
+  osc.connect(amp).connect(ctx.destination)
+  osc.start(at)
+  osc.stop(at + opts.duration)
+}
+
+function render(ctx: AudioContext, cue: Cue, now: number): void {
+  switch (cue) {
+    // Madera seca: el chasquido de un botón físico.
+    case 'click':
+      thud(ctx, now, { duration: 0.05, from: 3000, to: 700, gain: 0.25 })
+      tone(ctx, now, { freq: 180, duration: 0.05, gain: 0.12 })
+      return
+
+    // Una unidad más entra en posición.
+    case 'open':
+      tone(ctx, now, { freq: 330, duration: 0.07, gain: 0.1, wave: 'triangle' })
+      tone(ctx, now + 0.07, { freq: 495, duration: 0.09, gain: 0.1, wave: 'triangle' })
+      return
+
+    // El ariete contra la puerta: madera pesada, con el retumbe grave abajo.
+    case 'hit':
+      thud(ctx, now, { duration: 0.22, from: 1800, to: 120, gain: 0.5 })
+      tone(ctx, now, { freq: 90, duration: 0.28, slideTo: 45, gain: 0.35 })
+      return
+
+    // La estructura cede: tres golpes y el derrumbe.
+    case 'defeat':
+      thud(ctx, now, { duration: 0.18, from: 1600, to: 100, gain: 0.45 })
+      tone(ctx, now, { freq: 80, duration: 0.2, slideTo: 50, gain: 0.3 })
+      thud(ctx, now + 0.2, { duration: 0.18, from: 1400, to: 90, gain: 0.45 })
+      tone(ctx, now + 0.2, { freq: 70, duration: 0.2, slideTo: 42, gain: 0.3 })
+      thud(ctx, now + 0.42, { duration: 0.9, from: 1200, to: 60, gain: 0.55 })
+      tone(ctx, now + 0.42, { freq: 60, duration: 0.9, slideTo: 28, gain: 0.4 })
+      return
+
+    // El golpe rebota contra el muro: metálico y corto.
+    case 'survive':
+      thud(ctx, now, { duration: 0.09, from: 5000, to: 2200, gain: 0.22 })
+      tone(ctx, now, { freq: 740, duration: 0.1, gain: 0.1, wave: 'triangle' })
+      tone(ctx, now + 0.05, { freq: 1110, duration: 0.12, gain: 0.08, wave: 'triangle' })
+      return
+
+    // Se terminó el asedio: el informe está listo.
+    case 'done':
+      tone(ctx, now, { freq: 392, duration: 0.11, gain: 0.11, wave: 'triangle' })
+      tone(ctx, now + 0.12, { freq: 523, duration: 0.11, gain: 0.11, wave: 'triangle' })
+      tone(ctx, now + 0.24, { freq: 784, duration: 0.3, gain: 0.12, wave: 'triangle' })
+      return
+  }
 }
 
 /**
@@ -103,26 +167,7 @@ export function play(cue: Cue): void {
   try {
     const ctx = audioContext()
     if (!ctx) return
-    const now = ctx.currentTime
-
-    for (const note of CUES[cue]) {
-      const osc = ctx.createOscillator()
-      const amp = ctx.createGain()
-      osc.type = note.wave ?? 'square'
-
-      const start = now + note.at
-      const end = start + note.duration
-      osc.frequency.setValueAtTime(note.freq, start)
-      if (note.slideTo) osc.frequency.exponentialRampToValueAtTime(note.slideTo, end)
-
-      // Una caída exponencial hasta casi cero: cortar de golpe hace un clic feo.
-      amp.gain.setValueAtTime(note.gain ?? 0.15, start)
-      amp.gain.exponentialRampToValueAtTime(0.0001, end)
-
-      osc.connect(amp).connect(ctx.destination)
-      osc.start(start)
-      osc.stop(end)
-    }
+    render(ctx, cue, ctx.currentTime)
   } catch {
     // Sin audio se sigue igual.
   }

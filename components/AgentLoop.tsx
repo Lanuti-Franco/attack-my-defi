@@ -1,8 +1,8 @@
 'use client'
 
 import type { AuditEvent } from '@/lib/schemas/strategy'
-import { hf } from '@/lib/format'
 import { withoutNumbers } from '@/lib/ai/rationale'
+import { ChainAnswer } from '@/components/ChainAnswer'
 
 type Attempt = Extract<AuditEvent, { type: 'attempt' }>
 
@@ -34,18 +34,10 @@ export function AgentLoop({ attempts, waiting }: { attempts: Attempt[]; waiting:
             </p>
           )}
 
-          <div className="mt-[2px] flex items-baseline gap-2 pl-6">
-            <span className="font-chrome text-[9px] text-(--ink-soft)">Aave</span>
-            <span className="tabular-nums">HF {hf(attempt.healthFactor)}</span>
-            <span
-              className="font-semibold"
-              style={{
-                color: attempt.verdict === 'LIQUIDATABLE' ? 'var(--hp-low)' : 'var(--hp-high)',
-              }}
-            >
-              {attempt.verdict === 'LIQUIDATABLE' ? '☠ liquidates' : '🛡 holds'}
-            </span>
-          </div>
+          <ChainAnswer
+            healthFactor={attempt.healthFactor}
+            liquidated={attempt.verdict === 'LIQUIDATABLE'}
+          />
         </li>
       ))}
 
