@@ -105,11 +105,11 @@ attacks each need, on their own, ETH dropping 12.5%, or 4.4 years of interest, o
 cutting the threshold by 8.8 points, or a 12,500 WETH liquidation. The model found this:
 
 ```
-ETH -7.5%  +  2.6 years  +  LT −5.3 pts  +  7,500 WETH liquidated  →  HF 0.9016
+ETH -5.0%  +  21 months  +  LT −3.5 pts  +  5,000 WETH liquidated  →  HF 0.9602
 ```
 
-Each piece sits at 60% of what it would take to liquidate on its own. None of them breaks you.
-All four together do.
+Each piece sits at 40% of what it would take to liquidate on its own — not even half. None of
+them breaks you. All four together do.
 
 ## Local inference
 
@@ -132,6 +132,11 @@ thousands of tokens before a single call. With `reasoning_budget: 0` each step d
 and settled on a coarse value, off by 4.8 points. Given the already narrowed range —"the
 threshold is between -25% and -30%, try the midpoint"— it bisects and converges. We did not
 change models: we asked a question a 4B can actually answer well.
+
+**It repeated its first idea until the budget ran out.** On the combined attack it proposed one
+mix and then kept proposing the same one, failing 9 out of 10 times. It was receiving the
+history of what had been tried, but nobody had told it that repeating was pointless. Saying so
+explicitly, and raising the temperature with each failed attempt, took it from 1/10 to 10/10.
 
 **It is treated as an untrusted source**, like user input: its proposal is validated and
 normalised at the boundary (it sends `+25` when it means `-25`), repeated scenarios are
@@ -179,17 +184,38 @@ same number of attacks to combine. On the reference position of 100 WETH against
 USDC:
 
 ```
-  model    liquidated in 10/10 runs (100%) · 1.0 attempts on average
-  random   liquidated in  7/10 runs  (70%) · 1.7 attempts on average
+  model    liquidated in 10/10 runs (100%) · 1.9 attempts on average
+  random   liquidated in  7/10 runs  (70%) · 2.9 attempts on average
 ```
 
-The model finds the mix every time, on the first attempt; rolling dice fails three times out
-of ten. `pnpm combined-check` runs it again.
+`pnpm combined-check` runs it again.
 
-That result came from a second measurement. In the first one, each component could enter at
-85% of its individual threshold —so close to liquidating alone that almost any mix worked— and
-**random tied**. A problem you can solve by rolling dice proves nothing, so the cap dropped to
-60% and there it discriminates.
+Getting to a number that means anything took three measurements, and the two failed ones are
+worth more than the final one.
+
+**First, the problem was too easy.** Each component could enter at 85% of its individual
+threshold — so close to liquidating alone that almost any mix worked, and random tied. Dropping
+the cap to 60% did not fix it either: there the winning move is "push everything to the
+maximum allowed", which takes no judgement at all. Only at 40%, where not even half of each
+threshold is available, does choosing *what* to combine start to matter.
+
+**Then the comparison turned out to be rigged**, and not on purpose. The model could combine
+all four available attacks while random could only pick two or three. An adversarial review
+caught it. Once both sides saw the same options, an earlier published claim —that random fails
+three times out of ten— stopped being true at that cap.
+
+**And then the model lost, badly: 1/10 against random's 9/10.** The reason was in a counter
+added while fixing the above: `5 wasted turns` on nine of the ten runs. The model proposed one
+combination and then repeated it until the budget ran out. When its first idea was not enough,
+it did not explore.
+
+That last one is the interesting failure, because it was not the model's fault so much as the
+prompt's: it received the history of what had been tried but was never told that repeating it
+was pointless. Saying so explicitly, and raising the temperature with each failed attempt so it
+does not stay glued to its first idea, took the same model from 1/10 to 10/10.
+
+The same lesson as with bisection, in a different disguise: what changed was not the model, but
+the question.
 
 ### How it fails
 

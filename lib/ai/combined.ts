@@ -15,12 +15,13 @@ const MAX_TRIES = 6
  * Es lo que hace difícil el problema: si el modelo puede meter un ataque que ya
  * liquida solo, no encontró nada —la combinación sobra—.
  *
- * El 60% no es arbitrario. Con el tope al 85% cada pieza quedaba tan cerca de
- * alcanzar sola que casi cualquier mezcla liquidaba: medido contra un baseline
- * que elige al azar, el azar también ganaba siempre. Un problema que se
- * resuelve tirando los dados no demuestra nada sobre el modelo.
+ * El 40% se eligió midiendo. Con el tope al 85% cada pieza quedaba tan cerca de
+ * alcanzar sola que cualquier mezcla liquidaba; al 60% la estrategia ganadora
+ * era "poner todo al máximo permitido", que no necesita criterio. Recién al 40%
+ * hay que elegir bien qué combinar, y ahí la diferencia contra tirar los dados
+ * aparece: 10 de 10 contra 7 de 10.
  */
-const SUBCRITICAL = Number(process.env.COMBINED_SUBCRITICAL ?? 0.6)
+const SUBCRITICAL = Number(process.env.COMBINED_SUBCRITICAL ?? 0.4)
 
 export interface Ingredient {
   vectorId: string
@@ -240,7 +241,15 @@ async function propose(
   const run = completion({
     modelId,
     stream: false,
-    generationParams: seed === undefined ? GENERATION_PARAMS : { ...GENERATION_PARAMS, seed },
+    generationParams: {
+      ...GENERATION_PARAMS,
+      ...(seed === undefined ? {} : { seed }),
+      // Cada intento fallido sube la temperatura. Con la temperatura fija de la
+      // búsqueda individual el modelo repite su primera idea hasta agotar el
+      // presupuesto, y acá repetir no informa nada: lo que hace falta es que
+      // pruebe otra cosa.
+      temp: Math.min(0.9, GENERATION_PARAMS.temp + tries.length * 0.15),
+    },
     history: [
       {
         role: 'system',
@@ -261,7 +270,14 @@ Never estimate a health factor yourself. Only the tool knows it.`,
       },
       {
         role: 'user',
-        content: `Combinations tried so far:\n${history}\n\nPropose the next combination.`,
+        content:
+          `Combinations tried so far:\n${history}\n\n` +
+          (tries.length
+            ? 'Every combination above survived. Proposing any of them again wastes a turn: ' +
+              'the chain will answer exactly the same. Change something — swap which attacks ' +
+              'you use, or push harder on the ones you keep, staying within each limit.\n\n'
+            : '') +
+          'Propose the next combination.',
       },
     ],
     tools: [
