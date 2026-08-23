@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json()
   } catch {
-    return Response.json({ error: 'El body no es JSON válido' }, { status: 400 })
+    return Response.json({ error: 'The request body is not valid JSON' }, { status: 400 })
   }
 
   const parsed = requestSchema.safeParse(body)
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       } catch (err) {
         send({
           type: 'error',
-          message: err instanceof Error ? safeMessage(err) : 'Error desconocido en la auditoría',
+          message: err instanceof Error ? safeMessage(err) : 'Unknown error during the audit',
         })
       } finally {
         send({ type: 'done' })

@@ -22,7 +22,7 @@ function toneOf(percent: number): string {
 
 export function HealthBar({
   healthFactor,
-  label = 'Resistencia',
+  label = 'Resistance',
 }: {
   healthFactor: number
   label?: string
@@ -36,7 +36,7 @@ export function HealthBar({
       <div className="font-chrome mb-1 flex items-baseline justify-between text-[10px]">
         <span>{label}</span>
         <span className="font-mono text-[12px] font-semibold tabular-nums">
-          {dead ? 'LIQUIDADA' : `HF ${shown}`}
+          {dead ? 'LIQUIDATED' : `HF ${shown}`}
         </span>
       </div>
 
@@ -54,8 +54,8 @@ export function HealthBar({
 
       {/* La escala explicada donde se mira el número, no en una nota al pie. */}
       <div className="font-mono mt-1 flex justify-between text-[10px] text-(--ink-soft)">
-        <span>1,0 · te liquidan</span>
-        <span>2,0 · holgado</span>
+        <span>1.0 · liquidation</span>
+        <span>2.0 · comfortable</span>
       </div>
     </div>
   )

@@ -42,7 +42,7 @@ export async function lowerLiquidationThreshold(
     })
     const receipt = await publicClient.waitForTransactionReceipt({ hash })
     if (receipt.status !== 'success') {
-      throw new Error('configureReserveAsCollateral revirtió')
+      throw new Error('configureReserveAsCollateral reverted')
     }
   } finally {
     await testClient.stopImpersonatingAccount({ address: ADDRESSES.aclAdmin })

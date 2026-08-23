@@ -19,12 +19,12 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Attack My DeFi',
   description:
-    'Seis ataques contra tu posición en Aave V3, simulados sobre un fork de Ethereum mainnet. Ningún número lo inventa el modelo.',
+    'Seven attacks against your Aave V3 position, simulated on a fork of Ethereum mainnet. The model never makes up a number.',
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="es" className={`${silkscreen.variable} ${plexMono.variable} h-full`}>
+    <html lang="en" className={`${silkscreen.variable} ${plexMono.variable} h-full`}>
       <body className="min-h-full">{children}</body>
     </html>
   )

@@ -1,6 +1,6 @@
 # Attack My DeFi
 
-Elegís una posición de préstamo en Aave V3 y seis ataques distintos buscan el escenario más
+Elegís una posición de préstamo en Aave V3 y siete ataques distintos buscan el escenario más
 leve que la liquida. Cada health factor que ves lo devuelve el contrato de Aave sobre un fork
 de Ethereum mainnet, y el modelo que elige los escenarios corre entero en tu máquina.
 
@@ -53,7 +53,7 @@ auditoría no es una lectura —monta una posición, la rompe y revierte—. Un 
 impide que dos corridas se pisen, porque cuando eso pasa el síntoma es un revert
 incomprensible en un lugar que no tiene nada que ver.
 
-### Los seis ataques
+### Los seis ataques individuales
 
 Cuáles aplican depende de la posición: no tiene sentido buscarle un depeg a quien no tiene
 stablecoin de colateral.
@@ -75,6 +75,35 @@ stablecoin de colateral.
 - **Una cascada de liquidaciones** — liquidan a otro, su colateral se vende al mercado y el
   precio te arrastra a vos. Acotado a 25.000 WETH, que son unos 60 millones de dólares
   vendidos de golpe: más de lo que Aave liquidó en todo el día de marzo de 2020.
+
+### El séptimo: el ataque combinado
+
+Los seis anteriores se buscan por bisección, y conviene decirlo antes de que lo diga otro:
+**ahí el modelo no aporta gran cosa**. Dado el intervalo donde está el umbral, el próximo
+valor a probar es el punto medio, y eso es un `while` de tres líneas.
+
+El combinado es otra cosa. Corre al final, cuando ya se sabe cuánto aguanta cada ataque por
+separado, y busca una mezcla que liquide la posición **usando de cada ataque menos de lo que
+haría falta para romperla solo**. Ninguna pieza alcanza por su cuenta; la única forma de
+ganar es que se sumen.
+
+Ahí no hay fórmula. El espacio son todos los subconjuntos de ataques por todas sus
+intensidades, y elegir qué mezcla vale la pena probar depende de entender que el tiempo y la
+liquidez empujan los dos sobre la deuda, o que el precio y el umbral de liquidación muerden
+los dos sobre el colateral. Es el único lugar del proyecto donde el modelo hace algo que el
+código no podría hacer igual de bien, y por eso es el que cierra la auditoría.
+
+Sobre una posición de 100 WETH contra 180.000 USDC —health factor 1,1141— los seis ataques
+individuales necesitan, cada uno por su cuenta, ETH cayendo 12,5%, o 4,4 años de intereses, o
+que governance baje el umbral 8,8 puntos, o una liquidación de 12.500 WETH. El modelo
+encontró esto:
+
+```
+ETH -7,5%  +  2,6 años  +  LT −5,3 pts  +  liquidan 7.500 WETH  →  HF 0,9016
+```
+
+Cada pieza está en el 60% de lo que haría falta para liquidarla sola. Ninguna te rompe. Las
+cuatro juntas, sí.
 
 ## Inferencia local
 
@@ -105,11 +134,13 @@ repetidos se descartan, y hay tope de pasos y de negativas.
 
 ## Evidencia
 
-"Confiable" sin números es una opinión. `pnpm evidence` corre el mismo ataque varias veces,
-cada una con una semilla distinta, y mide dos cosas que conviene no mezclar: si converge al
-mismo umbral, y cuántas veces el código tuvo que suplir al modelo.
+"Confiable" sin números es una opinión, y "el modelo aporta" también. Hay dos scripts que
+contestan esas dos preguntas por separado.
 
-Cinco corridas sobre la posición de referencia:
+### ¿Usa bien las herramientas?
+
+`pnpm evidence` corre el mismo ataque varias veces, cada una con una semilla distinta, y mide
+si converge al mismo umbral y cuántas veces el código tuvo que suplir al modelo.
 
 ```
   semilla 100 →   ETH -27.5% en  7 sondeos ·  37s
@@ -131,24 +162,48 @@ hace casi no admite variación. Cuando el prompt entrega el intervalo ya acotado
 punto medio, la respuesta correcta es prácticamente única y la semilla no tiene de dónde
 agarrarse.
 
-El número que muestra el trabajo real es el otro, el de más arriba: **con la pregunta
-abierta el mismo modelo erraba por 4,8 puntos**. Reducirlo a cero no se logró cambiando de
-modelo, sino cambiando la pregunta.
+El número que muestra el trabajo real es el otro: **con la pregunta abierta el mismo modelo
+erraba por 4,8 puntos**. Reducirlo a cero no se logró cambiando de modelo, sino cambiando la
+pregunta.
+
+### ¿Sirve de algo el modelo?
+
+Es la pregunta incómoda, y en la bisección la respuesta honesta es "no mucho". Por eso el
+ataque combinado se compara contra el baseline más tonto posible: elegir ataques e
+intensidades al azar, con el mismo presupuesto de intentos.
+
+```
+  modelo   liquidó en 10/10 corridas (100%) · 1.0 intentos en promedio
+  azar     liquidó en  7/10 corridas  (70%) · 1.7 intentos en promedio
+```
+
+El modelo encuentra la mezcla siempre y al primer intento; tirar los dados falla tres de cada
+diez veces. `pnpm combined-check` lo vuelve a correr.
+
+Ese resultado salió de una segunda medición. En la primera, cada componente podía entrar al
+85% de su umbral individual —tan cerca de liquidar solo que casi cualquier mezcla servía— y
+**el azar empataba**. Un problema que se resuelve tirando los dados no demuestra nada, así
+que el tope bajó al 60% y ahí sí discrimina.
 
 ### Cómo falla
 
-Saber que anda importa menos que saber cómo se rompe. Dos modos de falla que aparecieron
+Saber que anda importa menos que saber cómo se rompe. Tres modos de falla que aparecieron
 corriendo esto:
 
 **Un fallo se reportaba como buena noticia.** Un `catch { break }` se tragaba cualquier error
 de simulación, así que una corrida que se caía por un problema de red terminaba reportando
 "no encontró umbral" — que la interfaz traduce a "tu posición sobrevivió". Es el peor modo de
-falla posible para una herramienta de riesgo. Ahora el fallo viaja con su motivo y se
-distingue de haber aguantado.
+falla posible para una herramienta de riesgo. Ahora el fallo viaja con su motivo.
 
 **Dos auditorías a la vez se pisaban.** El fork es un recurso exclusivo, y sin lock una
 corrida reseteaba el mundo mientras otra estaba a mitad de montar su posición. El síntoma era
 un `HealthFactorLowerThanLiquidationThreshold` en un borrow que no tenía nada de malo.
+
+**El mundo "limpio" podía no estarlo.** Si el snapshot de referencia se tomaba sobre un
+estado que ya tenía una posición montada, todas las corridas partían de ahí acumulando deuda.
+No fallaba: devolvía umbrales plausibles y equivocados, que es el único error que este
+proyecto no se puede permitir. Ahora el reset verifica a dónde volvió antes de darlo por
+bueno.
 
 ## La curva de impacto
 
@@ -219,7 +274,9 @@ pnpm tsx --env-file=.env.local scripts/m1-check.ts        # el motor contra la f
 pnpm tsx --env-file=.env.local scripts/m2-check.ts        # el atacante converge
 pnpm tsx --env-file=.env.local scripts/vectors-check.ts   # cada ataque da algo coherente
 pnpm tsx --env-file=.env.local scripts/wbtc-check.ts      # una posición con BTC de colateral
+pnpm tsx --env-file=.env.local scripts/audit-check.ts     # la auditoría completa, de punta a punta
 pnpm evidence                                             # confiabilidad del tool use
+pnpm combined-check                                       # el modelo contra elegir al azar
 pnpm curve-check                                          # la tabla contra cotizaciones reales
 ```
 
@@ -252,10 +309,16 @@ quedaba sin deuda, reportando un health factor infinito — "tu estrategia es in
 con la API key adentro. Ese texto llega al navegador como mensaje de error y se ve en
 pantalla. De cada URL sobrevive sólo el origen.
 
+**Un RPC que devuelve HTML mata a Anvil.** Los endpoints públicos contestan de a ratos con
+una página de error de Cloudflare en vez de JSON, y Anvil entra en panic al parsearla. Si se
+cae sin explicación, ese suele ser el motivo.
+
 ## Limitaciones
 
 Un solo protocolo (Aave V3 en Ethereum mainnet) y tres activos (WETH, WBTC, USDC). La cascada
-está acotada a 25.000 WETH porque más que eso no se midió, y la curva no se extrapola.
+está acotada a 25.000 WETH porque más que eso no se midió, y la curva no se extrapola. El
+ataque combinado deja afuera los que necesitan preparar el mundo antes de correr, porque sólo
+puede haber una preparación activa por vez.
 
 Los escenarios los elegimos nosotros: el sistema dice qué le pasa a una posición bajo esos
 escenarios, sobre un estado de la cadena congelado en un bloque. Nada acá predice qué va a

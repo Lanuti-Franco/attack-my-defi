@@ -55,7 +55,7 @@ export async function installMockFeed(asset: Address): Promise<Address> {
   })
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
   const mock = receipt.contractAddress
-  if (!mock) throw new Error('El deploy del MockAggregator no devolvió dirección')
+  if (!mock) throw new Error('Deploying the MockAggregator returned no address')
 
   // El ACLAdmin es un contrato de governance: hay que impersonarlo y darle gas.
   // El stop va en finally para no dejar la cuenta impersonada si algo falla en
@@ -86,7 +86,7 @@ export async function installMockFeed(asset: Address): Promise<Address> {
     args: [asset],
   })
   if (source.toLowerCase() !== mock.toLowerCase()) {
-    throw new Error(`setAssetSources no tomó: Aave sigue usando ${source}`)
+    throw new Error(`setAssetSources did not take: Aave is still using ${source}`)
   }
 
   installed.set(asset, mock)
@@ -96,7 +96,7 @@ export async function installMockFeed(asset: Address): Promise<Address> {
 /** Fija el precio del activo en USD. Aave lo lee en el próximo getUserAccountData. */
 export async function setAssetPrice(asset: Address, priceUsd: number): Promise<void> {
   const mock = installed.get(asset)
-  if (!mock) throw new Error(`No hay mock instalado para ${asset}. Llamá installMockFeed primero.`)
+  if (!mock) throw new Error(`No mock installed for ${asset}. Call installMockFeed first.`)
 
   const raw = parseUnits(priceUsd.toFixed(DECIMALS.base), DECIMALS.base)
   const hash = await walletClient.writeContract({

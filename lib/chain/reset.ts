@@ -61,8 +61,8 @@ async function refetchWorld(): Promise<void> {
 
   if (!jsonRpcUrl || !pinned) {
     throw new Error(
-      'Faltan ETHEREUM_RPC_URL y/o PINNED_BLOCK en .env.local. ' +
-        'Son necesarias para resetear el fork a un estado conocido.',
+      'Missing ETHEREUM_RPC_URL and/or PINNED_BLOCK in .env.local. ' +
+        'Both are needed to reset the fork to a known state.',
     )
   }
 
@@ -79,8 +79,8 @@ async function refetchWorld(): Promise<void> {
   }
 
   throw new Error(
-    `El fork no pudo volver al bloque ${pinned} después de 3 intentos. ` +
-      `Último error: ${safeMessage(lastError)}`,
+    `The fork could not return to block ${pinned} after 3 attempts. ` +
+      `Last error: ${safeMessage(lastError)}`,
   )
 }
 

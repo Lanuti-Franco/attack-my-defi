@@ -50,8 +50,8 @@ export function acquireForkLock(what: string): void {
     const age = Date.now() - holder.since
     if (alive(holder.pid) && age < STALE_AFTER_MS) {
       throw new Error(
-        `El fork ya lo está usando otra cosa: ${holder.what} (proceso ${holder.pid}, ` +
-          `hace ${Math.round(age / 1000)}s). Esperá a que termine o cortalo.`,
+        `The fork is already in use by something else: ${holder.what} (process ${holder.pid}, ` +
+          `${Math.round(age / 1000)}s ago). Wait for it to finish or stop it.`,
       )
     }
   }

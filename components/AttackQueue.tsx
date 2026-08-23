@@ -76,12 +76,12 @@ export function AttackQueue({
 function describe(item: QueueItem): string {
   switch (item.state) {
     case 'pending':
-      return 'en espera'
+      return 'queued'
     case 'running':
-      return item.probes ? `sondeo ${item.probes}` : 'preparando'
+      return item.probes ? `probe ${item.probes}` : 'setting up'
     case 'survived':
-      return 'aguantó'
+      return 'held'
     case 'breached':
-      return item.thresholdLabel ?? 'rompió'
+      return item.thresholdLabel ?? 'broke through'
   }
 }

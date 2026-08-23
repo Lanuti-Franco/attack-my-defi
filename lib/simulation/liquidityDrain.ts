@@ -94,7 +94,7 @@ export async function drainLiquidity(
     )
   }
   if (!(percentOfAvailable >= 0 && percentOfAvailable <= 100)) {
-    throw new Error(`percentOfAvailable tiene que estar entre 0 y 100, llegó ${percentOfAvailable}`)
+    throw new Error(`percentOfAvailable must be between 0 and 100, got ${percentOfAvailable}`)
   }
 
   const target = ASSETS[asset]
@@ -167,6 +167,6 @@ async function whaleSend(
   })
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
   if (receipt.status !== 'success') {
-    throw new Error(`La ballena no pudo ejecutar ${functionName}: revirtió en la cadena`)
+    throw new Error(`The whale could not run ${functionName}: it reverted on chain`)
   }
 }

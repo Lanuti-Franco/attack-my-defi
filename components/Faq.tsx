@@ -12,53 +12,65 @@ import { Window } from '@/components/win95/Window'
  */
 const ENTRIES: { question: string; answer: ReactNode }[] = [
   {
-    question: '¿Quién calcula estos números?',
+    question: 'Who computes these numbers?',
     answer: (
       <>
-        El contrato de Aave, no el modelo. Cada escenario se aplica sobre un fork de Ethereum
-        mainnet —se mueve el precio que el oráculo reporta— y después se le pregunta a Aave por el
-        health factor resultante. El modelo elige qué probar; la cadena responde cuánto da. Si el
-        modelo se equivoca al elegir, tarda más en encontrar el umbral, pero no puede inventar uno.
+        The Aave contract, not the model. Each scenario is applied to a fork of Ethereum mainnet
+        —the price the oracle reports gets moved— and then Aave is asked for the resulting health
+        factor. The model picks what to try; the chain answers what it comes to. If the model
+        picks badly it takes longer to find the threshold, but it cannot invent one.
       </>
     ),
   },
   {
-    question: '¿Dónde corre el modelo?',
+    question: 'Where does the model run?',
     answer: (
       <>
-        Entero en esta máquina, con el SDK de QVAC: un Qwen3 de 4.000 millones de parámetros
-        cuantizado, sin una sola llamada a una API externa. Podés desenchufar internet después de
-        levantar el fork y la auditoría sigue funcionando igual.
+        Entirely on this machine, through the QVAC SDK: a quantized Qwen3 with 4 billion
+        parameters, without a single call to an external API. You can unplug the internet after
+        the fork is up and the audit keeps working.
       </>
     ),
   },
   {
-    question: '¿Por qué un fork y no la cadena real?',
+    question: 'What does the model actually decide?',
     answer: (
       <>
-        Porque hay que romper la posición para saber qué la rompe, y en un fork eso no le cuesta
-        nada a nadie. El bloque está pineado, así que dos corridas cualesquiera parten del mismo
-        estado del mundo y dan el mismo resultado.
+        For the six individual attacks, not much: given the range where the threshold lies, the
+        next value to try is the midpoint, and that is a three-line loop. Where it earns its
+        place is the combined attack — finding a mix of attacks that liquidates you using less of
+        each one than it would take to break you alone. There is no formula for that, and picking
+        at random finds it 7 times out of 10 while the model finds it every time.
       </>
     ),
   },
   {
-    question: '¿Qué es el health factor?',
+    question: 'Why a fork instead of the real chain?',
     answer: (
       <>
-        Cuánto aguanta tu posición antes de que te liquiden. Debajo de 1, cualquiera puede repagar
-        parte de tu deuda y quedarse con tu colateral más un bonus. Arriba de 2 estás holgado. La
-        barra de vida de arriba es ese número.
+        Because you have to break the position to learn what breaks it, and on a fork that costs
+        nobody anything. The block is pinned, so any two runs start from the same state of the
+        world and reach the same result.
       </>
     ),
   },
   {
-    question: '¿Esto es consejo financiero?',
+    question: 'What is the health factor?',
     answer: (
       <>
-        No. Es un simulador: te dice qué le pasa a una posición bajo escenarios que elegimos
-        nosotros, sobre un estado de la cadena congelado en un bloque. Nada acá predice qué va a
-        hacer el mercado.
+        How much your position can take before you get liquidated. Below 1, anyone can repay part
+        of your debt and keep your collateral plus a bonus. Above 2 you are comfortable. The
+        health bar above is that number.
+      </>
+    ),
+  },
+  {
+    question: 'Is this financial advice?',
+    answer: (
+      <>
+        No. It is a simulator: it tells you what happens to a position under scenarios we chose,
+        on a state of the chain frozen at one block. Nothing here predicts what the market will
+        do.
       </>
     ),
   },
@@ -66,7 +78,7 @@ const ENTRIES: { question: string; answer: ReactNode }[] = [
 
 export function Faq() {
   return (
-    <Window title="Ayuda — Cómo funciona esto" icon="❓">
+    <Window title="Help — How this works" icon="❓">
       <div className="flex flex-col gap-[2px]">
         {ENTRIES.map(({ question, answer }) => (
           <details key={question} className="sunken bg-(--field)">

@@ -40,16 +40,16 @@ export function Verdict({
     <Window title="Resultado del asedio" icon={broken ? '☠️' : '🛡️'} opening>
       <p className="font-chrome text-[15px] leading-normal">
         {broken > 0
-          ? `Encontré ${broken} ${broken === 1 ? 'forma' : 'formas'} de romperte`
-          : 'No encontré por dónde romperte'}
+          ? `I found ${broken} ${broken === 1 ? 'way' : 'ways'} to break you`
+          : 'I found no way to break you'}
       </p>
       <p className="font-mono mt-1 text-[12px] text-(--ink-soft)">
-        de {vectorsRun} {vectorsRun === 1 ? 'ataque probado' : 'ataques probados'}
+        out of {vectorsRun} {vectorsRun === 1 ? 'attack tried' : 'attacks tried'}
       </p>
 
       {cheapest && (
         <dl className="sunken font-mono mt-3 bg-(--field) p-3 text-[13px]">
-          <dt className="font-chrome text-[9px] text-(--ink-soft)">El más barato</dt>
+          <dt className="font-chrome text-[9px] text-(--ink-soft)">The cheapest one</dt>
           <dd className="mt-1 text-[17px] font-semibold">
             {cheapest.label} · {cheapest.thresholdLabel}
           </dd>
@@ -65,16 +65,16 @@ export function Verdict({
       {recommendation && (
         <div className="sunken font-mono mt-2 bg-(--field) p-3 text-[13px]">
           <dt className="font-chrome text-[9px] text-(--ink-soft)">
-            Para sobrevivir {recommendation.benchmark}
+            To survive {recommendation.benchmark}
           </dt>
           {recommendation.alreadySafe ? (
             <p className="mt-1 text-(--hp-high)">
-              Tu posición ya lo aguanta, con health factor{' '}
+              Your position already takes it, at health factor{' '}
               {recommendation.resultingHealthFactor.toFixed(4)}.
             </p>
           ) : (
             <p className="mt-1 text-[17px] font-semibold">
-              bajá la deuda a {usd(recommendation.maxDebtUsd)}
+              bring the debt down to {usd(recommendation.maxDebtUsd)}
             </p>
           )}
         </div>
@@ -83,7 +83,7 @@ export function Verdict({
       {/* La línea que sostiene todo lo de arriba. Sin esto es una afirmación
           más; con esto es algo que cualquiera puede volver a correr. */}
       <p className="font-mono mt-3 border-t-2 border-(--chrome-shadow) pt-2 text-[11px] text-(--ink-soft)">
-        Verificado contra Aave V3 sobre un fork de Ethereum mainnet · bloque {forkBlock}
+        Verified against Aave V3 on an Ethereum mainnet fork · block {forkBlock}
       </p>
     </Window>
   )

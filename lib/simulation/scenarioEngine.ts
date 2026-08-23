@@ -78,7 +78,7 @@ export class ScenarioEngine {
   async prepare(setup: () => Promise<void>): Promise<void> {
     this.assertReady()
     if (this.pristineSnapshot) {
-      throw new Error('Ya hay una preparación activa: llamá releasePrepared() antes.')
+      throw new Error('A setup is already active: call releasePrepared() first.')
     }
     this.pristineSnapshot = this.baseSnapshot
     await setup()
@@ -140,7 +140,7 @@ export class ScenarioEngine {
     if (reverted !== true) {
       this.baseSnapshot = null
       throw new Error(
-        'El revert del fork falló: el estado quedó contaminado. Reiniciá el ataque.',
+        'Reverting the fork failed: the state is contaminated. Restart the attack.',
       )
     }
 
@@ -152,7 +152,7 @@ export class ScenarioEngine {
 
   private assertReady(): void {
     if (!this.user || !this.baseSnapshot) {
-      throw new Error('ScenarioEngine sin inicializar: llamá setup() primero')
+      throw new Error('ScenarioEngine not initialised: call setup() first')
     }
   }
 }

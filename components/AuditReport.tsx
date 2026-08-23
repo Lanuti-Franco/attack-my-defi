@@ -145,7 +145,7 @@ export function AuditReport({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
           {focused ? <Console run={focused} /> : <Waiting />}
 
-          <Window title="Los ataques" icon="⚔️">
+          <Window title="The attacks" icon="⚔️">
             <AttackQueue
               items={vectors.map((v) => ({
                 id: v.id,
@@ -193,7 +193,7 @@ function Console({ run }: { run: VectorRun }) {
             </div>
           ) : (
             <p className="font-mono mt-3 text-[11px] text-(--ink-soft)">
-              El modelo está eligiendo por dónde entrar…
+              The model is choosing where to strike…
             </p>
           )}
 
@@ -213,8 +213,8 @@ function Console({ run }: { run: VectorRun }) {
 
 function Waiting() {
   return (
-    <Window title="Consola" icon="⚔️" className="min-h-[22rem]">
-      <p className="font-mono text-[12px] text-(--ink-soft)">Montando la posición en el fork…</p>
+    <Window title="Console" icon="⚔️" className="min-h-[22rem]">
+      <p className="font-mono text-[12px] text-(--ink-soft)">Building the position on the fork…</p>
       <div className="mt-3">
         <ProgressBar />
       </div>
@@ -232,28 +232,28 @@ function BlueScreen({ run }: { run: VectorRun }) {
         Attack My DeFi
       </p>
 
-      <p>Tu posición dejó de responder.</p>
+      <p>Your position has stopped responding.</p>
 
       <p className="mt-3 pl-4">
-        Alcanza con <span className="text-[15px] font-semibold">{run.thresholdLabel}</span>
-        {killer && <> para dejarte en HF {hf(killer.healthFactor)}</>}.
+        <span className="text-[15px] font-semibold">{run.thresholdLabel}</span> is enough
+        {killer && <> to leave you at HF {hf(killer.healthFactor)}</>}.
       </p>
 
       {run.attackerProfitUsd !== undefined && (
         <p className="mt-3 pl-4">
-          Quien te liquide se lleva{' '}
-          <span className="text-[15px] font-semibold">{usd(run.attackerProfitUsd)}</span> si el
-          precio venía de un feed y no del mercado.
+          Whoever liquidates you takes{' '}
+          <span className="text-[15px] font-semibold">{usd(run.attackerProfitUsd)}</span> if the
+          price came from a feed and not from the market.
         </p>
       )}
 
       <p className="mt-4">
-        {run.attempts.length} sondeos contra el fork. Cada health factor lo devolvió el contrato
-        de Aave.
+        {run.attempts.length} probes against the fork. Every health factor came back from the
+        Aave contract.
       </p>
 
       <p className="mt-4">
-        Presione cualquier tecla para continuar <span className="blink">_</span>
+        Press any key to continue <span className="blink">_</span>
       </p>
     </div>
   )

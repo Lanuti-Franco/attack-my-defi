@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json()
   } catch {
-    return Response.json({ error: 'El body no es JSON válido' }, { status: 400 })
+    return Response.json({ error: 'The request body is not valid JSON' }, { status: 400 })
   }
 
   const parsed = requestSchema.safeParse(body)
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const vector = vectorById(strategy, vectorId)
   if (!vector) {
     return Response.json(
-      { error: `El vector "${vectorId}" no aplica a esta posición` },
+      { error: `Attack "${vectorId}" does not apply to this position` },
       { status: 400 },
     )
   }
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       } catch (err) {
         send({
           type: 'error',
-          message: err instanceof Error ? safeMessage(err) : 'Error desconocido en el ataque',
+          message: err instanceof Error ? safeMessage(err) : 'Unknown error during the attack',
         })
       } finally {
         send({ type: 'done' })

@@ -47,11 +47,11 @@ export function PositionPanel({
 
   return (
     <fieldset className="raised p-3">
-      <legend className="font-chrome px-1 text-[10px]">Tu posición</legend>
+      <legend className="font-chrome px-1 text-[10px]">Your position</legend>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Leg
-          label="Depositás"
+          label="You deposit"
           amount={strategy.collateral.amount}
           asset={strategy.collateral.asset}
           onAmount={(amount) => setLeg('collateral', { amount })}
@@ -59,7 +59,7 @@ export function PositionPanel({
           disabled={running}
         />
         <Leg
-          label="Pedís prestado"
+          label="You borrow"
           amount={strategy.debt.amount}
           asset={strategy.debt.asset}
           onAmount={(amount) => setLeg('debt', { amount })}
@@ -83,7 +83,7 @@ export function PositionPanel({
 
       {sameAsset && (
         <p className="font-mono mt-3 text-[11px] text-(--hp-low)">
-          Depositar y pedir prestado el mismo activo no arma una posición atacable.
+          Depositing and borrowing the same asset does not make an attackable position.
         </p>
       )}
 
@@ -92,7 +92,7 @@ export function PositionPanel({
         disabled={running || sameAsset}
         className="mt-4 w-full px-4 py-3 text-[14px] tracking-[0.2em]"
       >
-        {running ? 'ATACANDO…' : 'ATACAME'}
+        {running ? 'ATTACKING…' : 'ATTACK ME'}
       </Button>
     </fieldset>
   )

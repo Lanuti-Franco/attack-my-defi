@@ -24,7 +24,7 @@ export function Taskbar({
   return (
     <footer className="raised fixed inset-x-0 bottom-0 z-50 flex items-center gap-1 px-1 py-[3px]">
       <span className="raised font-chrome flex items-center gap-1 px-2 py-[5px] text-[11px]">
-        <span aria-hidden>🪟</span> Inicio
+        <span aria-hidden>🪟</span> Start
       </span>
 
       <div className="flex min-w-0 flex-1 gap-1 overflow-hidden">
@@ -44,7 +44,7 @@ export function Taskbar({
           onClick={onToggleMute}
           aria-pressed={muted}
           className="btn text-[12px] leading-none"
-          title={muted ? 'Activar sonido' : 'Silenciar'}
+          title={muted ? 'Unmute' : 'Mute'}
         >
           <span className="block">{muted ? '🔇' : '🔊'}</span>
         </button>
@@ -55,7 +55,7 @@ export function Taskbar({
         >
           ●
         </span>
-        <span className="tabular-nums">bloque {forkBlock}</span>
+        <span className="tabular-nums">block {forkBlock}</span>
       </div>
     </footer>
   )

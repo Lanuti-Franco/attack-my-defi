@@ -29,8 +29,8 @@ export async function assertForkAlive(): Promise<number> {
     return Number(bn)
   } catch {
     throw new Error(
-      `No hay un Anvil escuchando en ${FORK_URL}. Levantalo con:\n` +
-        `  anvil --fork-url $ETHEREUM_RPC_URL --fork-block-number <BLOQUE> --port 8545`,
+      `No Anvil listening on ${FORK_URL}. Start one with:\n` +
+        `  anvil --fork-url $ETHEREUM_RPC_URL --fork-block-number <BLOCK> --port 8545`,
     )
   }
 }

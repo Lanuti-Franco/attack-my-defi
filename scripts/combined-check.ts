@@ -26,7 +26,8 @@ const STRATEGY: Strategy = {
 
 const RUNS = Number(process.argv[2] ?? 3)
 const BUDGET = 6
-const SUBCRITICAL = 0.6
+/** Se puede barrer para ver a qué altura de la vara el problema deja de ser trivial. */
+const SUBCRITICAL = Number(process.argv[3] ?? 0.6)
 
 /** Elige ataques e intensidades sin ningún criterio. El piso contra el que medir. */
 function randomCombination(all: KnownVector[]): Mutation[] {

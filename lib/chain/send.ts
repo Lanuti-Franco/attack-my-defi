@@ -34,7 +34,7 @@ export async function send({ address, abi, functionName, args, value, from }: Se
       value,
     })
   } catch (err) {
-    throw new Error(`${functionName} revertiría: ${explainRevert(err)}`)
+    throw new Error(`${functionName} would revert: ${explainRevert(err)}`)
   }
 
   const hash = await walletClient.writeContract({
@@ -53,7 +53,7 @@ export async function send({ address, abi, functionName, args, value, from }: Se
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
   if (receipt.status !== 'success') {
-    throw new Error(`${functionName} revirtió en la cadena (tx ${hash})`)
+    throw new Error(`${functionName} reverted on chain (tx ${hash})`)
   }
   return receipt
 }

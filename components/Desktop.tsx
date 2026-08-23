@@ -50,7 +50,7 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
       })
 
       if (!res.ok || !res.body) {
-        const err = await res.json().catch(() => ({ error: 'La auditoría no pudo arrancar' }))
+        const err = await res.json().catch(() => ({ error: 'The audit could not start' }))
         setEvents([{ type: 'error', message: err.error }])
         return
       }
@@ -79,7 +79,7 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
     } catch (err) {
       setEvents((prev) => [
         ...prev,
-        { type: 'error', message: err instanceof Error ? err.message : 'Error de red' },
+        { type: 'error', message: err instanceof Error ? err.message : 'Network error' },
       ])
     } finally {
       setRunning(false)
@@ -98,30 +98,30 @@ export function Desktop({ forkBlock }: { forkBlock: string }) {
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div>
             <p className="font-mono mb-2 text-[12px] leading-relaxed">
-              Seis ataques distintos contra tu posición en Aave, y qué tendrías que hacer para
-              sobrevivirlos. El modelo elige qué escenario probar; los números los devuelve el
-              contrato de Aave sobre un fork de Ethereum mainnet.
+              Seven different attacks against your Aave position, and what you would have to do
+              to survive them. The model picks which scenario to try; the numbers come back from
+              the Aave contract, on a fork of Ethereum mainnet.
             </p>
 
             {/* Que la inferencia sea local es el punto entero del proyecto, así
                 que va donde se lee sin abrir nada. */}
             <p className="sunken font-mono bg-(--field) px-2 py-[6px] text-[11px]">
-              <span className="text-(--ink-soft)">modelo</span> {MODEL_LABEL} ·{' '}
-              <span className="text-(--ink-soft)">corre en</span> esta máquina, vía QVAC ·{' '}
-              <span className="text-(--ink-soft)">llamadas a APIs externas</span> ninguna
+              <span className="text-(--ink-soft)">model</span> {MODEL_LABEL} ·{' '}
+              <span className="text-(--ink-soft)">runs on</span> this machine, via QVAC ·{' '}
+              <span className="text-(--ink-soft)">external API calls</span> none
             </p>
 
             {position && (
               <div className="mt-3">
                 <HealthBar
                   healthFactor={position.healthFactor}
-                  label="Resistencia de la posición"
+                  label="Position resistance"
                 />
                 <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
-                  <Stat label="Colateral" value={usd(position.collateralUsd)} />
-                  <Stat label="Deuda" value={usd(position.debtUsd)} />
+                  <Stat label="Collateral" value={usd(position.collateralUsd)} />
+                  <Stat label="Debt" value={usd(position.debtUsd)} />
                   <Stat
-                    label="Umbral de liquidación"
+                    label="Liquidation threshold"
                     value={`${(position.liquidationThreshold * 100).toFixed(0)}%`}
                   />
                 </dl>

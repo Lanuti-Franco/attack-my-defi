@@ -51,10 +51,10 @@ export function combinedFrom(events: AuditEvent[]): CombinedView | null {
  */
 export function CombinedAttack({ view }: { view: CombinedView }) {
   return (
-    <Window title="Ataque combinado" icon="🎯">
+    <Window title="Combined attack" icon="🎯">
       <p className="font-mono mb-3 text-[12px] leading-relaxed text-(--ink-soft)">
-        Ninguno de estos ataques liquida tu posición por su cuenta. El modelo busca una mezcla
-        que sí, usando de cada uno menos de lo que haría falta para romperte solo.
+        None of these attacks liquidates your position on its own. The model looks for a mix
+        that does, using less of each one than it would take to break you alone.
       </p>
 
       {!view.done && <ProgressBar />}
@@ -75,7 +75,7 @@ export function CombinedAttack({ view }: { view: CombinedView }) {
                 className="font-semibold"
                 style={{ color: attempt.liquidated ? 'var(--hp-low)' : 'var(--hp-high)' }}
               >
-                {attempt.liquidated ? '☠ liquida' : '🛡 aguanta'}
+                {attempt.liquidated ? '☠ liquidates' : '🛡 holds'}
               </span>
             </div>
           </li>
@@ -84,7 +84,7 @@ export function CombinedAttack({ view }: { view: CombinedView }) {
         {!view.done && (
           <li className={view.tries.length ? 'mt-2 border-t border-(--chrome) pt-2' : ''}>
             <span className="text-(--ink-soft)">
-              el modelo está eligiendo qué mezclar <span className="blink">█</span>
+              the model is choosing what to mix <span className="blink">█</span>
             </span>
           </li>
         )}
@@ -93,10 +93,10 @@ export function CombinedAttack({ view }: { view: CombinedView }) {
       {view.done && (
         <p className="font-mono mt-3 border-t-2 border-(--chrome-shadow) pt-3 text-[12px] leading-relaxed">
           {view.failure
-            ? `La búsqueda se cortó: ${view.failure}`
+            ? `The search stopped: ${view.failure}`
             : view.liquidated
-              ? 'Encontró la mezcla. Ninguna de esas piezas te rompe sola.'
-              : `Ninguna de las ${view.tries.length} mezclas que probó llegó a liquidarte.`}
+              ? 'It found the mix. None of those pieces breaks you on its own.'
+              : `None of the ${view.tries.length} mixes it tried managed to liquidate you.`}
         </p>
       )}
     </Window>

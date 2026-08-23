@@ -48,7 +48,7 @@ async function* audit(
   if (base.debtUsd < 1) {
     yield {
       type: 'error',
-      message: 'La posición no tiene deuda, así que no puede liquidarse. Pedí prestado algo.',
+      message: 'The position has no debt, so it cannot be liquidated. Borrow something first.',
     }
     return
   }

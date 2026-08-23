@@ -82,9 +82,9 @@ function priceCrash(strategy: Strategy): AttackVector {
   if (!stable) {
     return {
       id: 'price',
-      label: `Caída de ${label}`,
+      label: `${label} crash`,
       premise:
-        'El precio que Aave usa para tu colateral baja, sea porque el mercado cayó o porque el feed falló.',
+        'The price Aave uses for your collateral drops, whether the market fell or the feed failed.',
       mutate: (pct) => [{ type: 'priceShock', asset: collateral, pct }],
       bounds: { safe: 0, extreme: -80 },
       scale: 'percent',
@@ -93,7 +93,7 @@ function priceCrash(strategy: Strategy): AttackVector {
       paramName: 'drop_pct',
       paramDescription: `${label} price change in percent. Negative: -25 means ${label} drops 25%.`,
       survivedMessage:
-        'Ni una caída del 80% la liquida. Tu colateral cubre la deuda con muchísimo margen.',
+        'Not even an 80% crash liquidates it. Your collateral covers the debt with room to spare.',
       targetAsset: collateral,
       reportsOracleProfit: true,
     }
@@ -102,8 +102,8 @@ function priceCrash(strategy: Strategy): AttackVector {
   const debtAsset = strategy.debt.asset
   return {
     id: 'price',
-    label: `Suba de ${debtAsset}`,
-    premise: `${debtAsset} se dispara y tu deuda crece más rápido que tu colateral.`,
+    label: `${debtAsset} spike`,
+    premise: `${debtAsset} spikes and your debt grows faster than your collateral.`,
     mutate: (pct) => [{ type: 'priceShock', asset: debtAsset, pct }],
     bounds: { safe: 0, extreme: 200 },
     scale: 'percent',
@@ -111,7 +111,7 @@ function priceCrash(strategy: Strategy): AttackVector {
     briefing: `You are looking for the smallest ${debtAsset} price increase that makes the position liquidatable. The debt is denominated in ${debtAsset}, so a more expensive ${debtAsset} means a larger debt.`,
     paramName: 'rise_pct',
     paramDescription: `${debtAsset} price change in percent. Positive: 25 means it rises 25%.`,
-    survivedMessage: `Ni triplicando el precio de ${debtAsset} te liquidan.`,
+    survivedMessage: `Not even tripling the price of ${debtAsset} liquidates you.`,
     targetAsset: debtAsset,
   }
 }
@@ -133,19 +133,19 @@ function stablecoinDepeg(strategy: Strategy): AttackVector | null {
 
   return {
     id: 'depeg',
-    label: 'Depeg de USDC',
-    premise: 'USDC pierde el peg y tu colateral se evapora, como en marzo de 2023.',
+    label: 'USDC depeg',
+    premise: 'USDC loses its peg and your collateral evaporates, like in March 2023.',
     mutate: (usd) => [{ type: 'priceSet', asset: 'USDC', usd }],
     bounds: { safe: 1, extreme: 0.5 },
     scale: 'absolute',
-    format: (usd) => `USDC a $${usd.toFixed(3)}`,
+    format: (usd) => `USDC at $${usd.toFixed(3)}`,
     briefing:
       'You are looking for the smallest USDC price drop below its $1 peg that makes the position ' +
       'liquidatable. The collateral is USDC, so a cheaper USDC means less collateral value.',
     paramName: 'usdc_price',
     paramDescription: 'USDC price in USD. 1.0 is the peg. 0.9 means USDC trades 10% below peg.',
     survivedMessage:
-      'Aguantás un USDC a 50 centavos, mucho peor que el mínimo histórico de $0,87 en marzo de 2023.',
+      'You survive USDC at 50 cents, far worse than its all-time low of $0.87 in March 2023.',
     targetAsset: 'USDC',
   }
 }
@@ -164,16 +164,16 @@ function stablecoinDepeg(strategy: Strategy): AttackVector | null {
 function timeDecay(): AttackVector {
   return {
     id: 'time',
-    label: 'El paso del tiempo',
-    premise: 'Nadie ataca y el precio no se mueve: tu deuda crece sola por el interés.',
+    label: 'Time passing',
+    premise: 'Nobody attacks and the price holds: your debt grows on its own, from interest.',
     mutate: (days) => [{ type: 'advanceTime', days }],
     bounds: { safe: 0, extreme: 3650 },
     scale: 'percent',
     format: (days) => {
       const d = Math.round(days)
-      if (d < 60) return `+${d} días`
+      if (d < 60) return `+${d} days`
       const months = d / 30.44
-      return months < 24 ? `+${months.toFixed(1)} meses` : `+${(d / 365.25).toFixed(1)} años`
+      return months < 24 ? `+${months.toFixed(1)} months` : `+${(d / 365.25).toFixed(1)} years`
     },
     briefing:
       'You are looking for how long it takes until the position becomes liquidatable on its own, ' +
@@ -183,7 +183,7 @@ function timeDecay(): AttackVector {
     paramName: 'days',
     paramDescription: 'How many days to let pass. 365 means one year.',
     survivedMessage:
-      'Ni en diez años el interés te alcanza. Tu deuda crece más lento de lo que tu colchón aguanta.',
+      'Ten years of interest still is not enough. Your debt grows slower than your cushion can take.',
   }
 }
 
@@ -199,8 +199,8 @@ function governanceRiskChange(strategy: Strategy): AttackVector {
   const asset = strategy.collateral.asset
   return {
     id: 'governance',
-    label: 'Un voto de governance',
-    premise: `Aave le baja el umbral de liquidación al ${asset} y tu posición pasa a liquidable sin que el mercado se mueva.`,
+    label: 'A governance vote',
+    premise: `Aave lowers the liquidation threshold on ${asset} and your position becomes liquidatable without the market moving at all.`,
     mutate: (points) => [{ type: 'lowerThreshold', asset, points }],
     bounds: { safe: 0, extreme: 40 },
     scale: 'percent',
@@ -214,7 +214,7 @@ function governanceRiskChange(strategy: Strategy): AttackVector {
     paramDescription:
       'How many percentage points to lower the liquidation threshold by. 5 means it goes from 83% to 78%.',
     survivedMessage:
-      'Aguantás que Aave te recorte 40 puntos el umbral, un ajuste mucho mayor que cualquiera que haya hecho.',
+      'You survive Aave cutting the threshold by 40 points, a far bigger adjustment than any it has ever made.',
     targetAsset: asset,
   }
 }
@@ -238,8 +238,8 @@ function liquidityCrisis(strategy: Strategy): AttackVector {
   const asset = strategy.debt.asset
   return {
     id: 'liquidity',
-    label: 'Una corrida de liquidez',
-    premise: `El pool de ${asset} se vacía, la tasa se dispara y tu deuda crece mucho más rápido.`,
+    label: 'A liquidity run',
+    premise: `The ${asset} pool drains, the rate spikes and your debt grows much faster.`,
     // La ballena queda con el colateral ya depositado antes del primer escenario:
     // envolver y depositar 400.000 WETH es la parte cara y no cambia entre
     // escenarios, sólo cambia cuánto pide prestado.
@@ -250,7 +250,7 @@ function liquidityCrisis(strategy: Strategy): AttackVector {
     ],
     bounds: { safe: 0, extreme: 99 },
     scale: 'percent',
-    format: (pct) => `${pct.toFixed(0)}% de la liquidez`,
+    format: (pct) => `${pct.toFixed(0)}% of liquidity`,
     formatForModel: (pct) => `${pct.toFixed(0)} percent`,
     briefing:
       `You are looking for the smallest fraction of the ${asset} pool liquidity that has to be ` +
@@ -260,7 +260,7 @@ function liquidityCrisis(strategy: Strategy): AttackVector {
     paramDescription:
       'What percentage of the available pool liquidity gets borrowed away. 90 means 90% of it.',
     survivedMessage:
-      'Aunque se lleven casi toda la liquidez del pool, el interés no te alcanza dentro del año.',
+      'Even if almost all the pool liquidity is drained, the interest does not catch you within a year.',
     targetAsset: asset,
   }
 }
@@ -286,15 +286,15 @@ function liquidationCascade(strategy: Strategy): AttackVector | null {
 
   return {
     id: 'cascade',
-    label: 'Una cascada de liquidaciones',
-    premise: 'Liquidan a otro, su colateral se vende al mercado y el precio te arrastra a vos.',
+    label: 'A liquidation cascade',
+    premise: 'Someone else gets liquidated, their collateral is dumped on the market, and the price drags you down with it.',
     mutate: (amount) => [{ type: 'marketSale', asset: 'WETH', amount }],
     // 25.000 WETH son unos 60 millones de dólares vendidos de golpe: más de lo
     // que liquidó Aave en todo el día de marzo de 2020 o el de mayo de 2021.
     // Arriba de eso ya no es una cascada, es un escenario que nunca ocurrió.
     bounds: { safe: 0, extreme: 25_000 },
     scale: 'percent',
-    format: (amount) => `liquidan ${Math.round(amount)} WETH`,
+    format: (amount) => `${Math.round(amount)} WETH liquidated`,
     formatForModel: (amount) => `${Math.round(amount)} WETH`,
     briefing:
       'You are looking for the smallest liquidation, measured in WETH sold into the market, that ' +
@@ -303,7 +303,7 @@ function liquidationCascade(strategy: Strategy): AttackVector | null {
     paramName: 'weth_liquidated',
     paramDescription: 'How much WETH gets liquidated and sold into the market, in whole WETH.',
     survivedMessage:
-      'Ni una cascada de 25.000 WETH liquidados de golpe te arrastra: más de lo que Aave liquidó en todo el día de marzo de 2020.',
+      'Not even 25,000 WETH liquidated at once drags you down: more than Aave liquidated in all of March 2020.',
     targetAsset: 'WETH',
   }
 }

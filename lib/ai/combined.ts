@@ -20,7 +20,7 @@ const MAX_TRIES = 6
  * que elige al azar, el azar también ganaba siempre. Un problema que se
  * resuelve tirando los dados no demuestra nada sobre el modelo.
  */
-const SUBCRITICAL = 0.6
+const SUBCRITICAL = Number(process.env.COMBINED_SUBCRITICAL ?? 0.6)
 
 export interface Ingredient {
   vectorId: string
@@ -131,7 +131,7 @@ export async function* searchCombination(opts: {
   // combinación. Con los que quedan alcanza de sobra para mezclar.
   const known = opts.known.filter((k) => !k.vector.prepare)
   if (known.length < 2) {
-    return { tries, winner: null, failure: 'Hacen falta al menos dos ataques combinables.' }
+    return { tries, winner: null, failure: 'At least two combinable attacks are needed.' }
   }
 
   const slots = Object.fromEntries(

@@ -407,7 +407,7 @@ export async function* runAttack(
     yield {
       type: "error",
       message:
-        "La posición no tiene deuda, así que no puede liquidarse. Pedí prestado algo.",
+        "The position has no debt, so it cannot be liquidated. Borrow something first.",
     };
     return;
   }

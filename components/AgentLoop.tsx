@@ -23,8 +23,8 @@ export function AgentLoop({ attempts, waiting }: { attempts: Attempt[]; waiting:
         <li key={i} className={i > 0 ? 'mt-2 border-t border-(--chrome) pt-2' : ''}>
           <div className="flex items-baseline gap-2">
             <span className="text-(--ink-soft) tabular-nums">{i + 1}</span>
-            <span className="font-chrome text-[9px] text-(--ink-soft)">modelo</span>
-            <span className="font-semibold">probá {attempt.label}</span>
+            <span className="font-chrome text-[9px] text-(--ink-soft)">model</span>
+            <span className="font-semibold">try {attempt.label}</span>
           </div>
 
           {attempt.rationale && (
@@ -42,7 +42,7 @@ export function AgentLoop({ attempts, waiting }: { attempts: Attempt[]; waiting:
                 color: attempt.verdict === 'LIQUIDATABLE' ? 'var(--hp-low)' : 'var(--hp-high)',
               }}
             >
-              {attempt.verdict === 'LIQUIDATABLE' ? '☠ liquida' : '🛡 aguanta'}
+              {attempt.verdict === 'LIQUIDATABLE' ? '☠ liquidates' : '🛡 holds'}
             </span>
           </div>
         </li>
@@ -50,9 +50,9 @@ export function AgentLoop({ attempts, waiting }: { attempts: Attempt[]; waiting:
 
       {waiting && (
         <li className={attempts.length ? 'mt-2 border-t border-(--chrome) pt-2' : ''}>
-          <span className="font-chrome text-[9px] text-(--ink-soft)">modelo</span>{' '}
+          <span className="font-chrome text-[9px] text-(--ink-soft)">model</span>{' '}
           <span className="text-(--ink-soft)">
-            eligiendo el próximo escenario <span className="blink">█</span>
+            choosing the next scenario <span className="blink">█</span>
           </span>
         </li>
       )}

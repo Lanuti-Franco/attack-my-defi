@@ -71,10 +71,10 @@ export async function measureMarketImpact(
   amount: number,
 ): Promise<MarketImpact> {
   if (asset !== 'WETH') {
-    throw new Error('El impacto de mercado sólo está modelado para WETH por ahora')
+    throw new Error('Market impact is only modelled for WETH so far')
   }
   if (!(amount > 0)) {
-    throw new Error(`La cantidad a vender tiene que ser positiva, llegó ${amount}`)
+    throw new Error(`The amount to sell must be positive, got ${amount}`)
   }
 
   const best = await quoteBest(amount)
